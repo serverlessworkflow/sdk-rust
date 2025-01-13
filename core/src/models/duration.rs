@@ -1,4 +1,5 @@
 use serde_derive::{Deserialize, Serialize};
+use std::fmt;
 
 /// Represents a duration
 #[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
@@ -27,6 +28,61 @@ pub struct Duration{
 }
 impl Duration{
     
+    /// Initializes a new Duration from the specified amount of days
+    pub fn from_days(days: u64) -> Self{
+        Self { 
+            days: Some(days), 
+            hours: None, 
+            minutes: None, 
+            seconds: None, 
+            milliseconds: None 
+        }
+    }
+
+    /// Initializes a new Duration from the specified amount of hours
+    pub fn from_hours(hours: u64) -> Self{
+        Self { 
+            days: None, 
+            hours: Some(hours), 
+            minutes: None, 
+            seconds: None, 
+            milliseconds: None 
+        }
+    }
+
+    /// Initializes a new Duration from the specified amount of minutes
+    pub fn from_minutes(minutes: u64) -> Self{
+        Self { 
+            days: None, 
+            hours: None, 
+            minutes: Some(minutes), 
+            seconds: None, 
+            milliseconds: None 
+        }
+    }
+
+    /// Initializes a new Duration from the specified amount of seconds
+    pub fn from_seconds(seconds: u64) -> Self{
+        Self { 
+            days: None, 
+            hours: None, 
+            minutes: None, 
+            seconds: Some(seconds), 
+            milliseconds: None 
+        }
+    }
+
+    /// Initializes a new Duration from the specified amount of milliseconds
+    pub fn from_milliseconds(milliseconds: u64) -> Self{
+        Self { 
+            days: None, 
+            hours: None, 
+            minutes: None, 
+            seconds: None, 
+            milliseconds: Some(milliseconds) 
+        }
+    }
+
     /// Gets the the duration's total amount of days
     pub fn total_days(&self) -> f64{
         self.total_hours() / 24.0
@@ -58,6 +114,27 @@ impl Duration{
     }
 
 }
+impl fmt::Display for Duration {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut parts = Vec::new();
+        if let Some(days) = self.days {
+            parts.push(format!("{} days", days));
+        }
+        if let Some(hours) = self.hours {
+            parts.push(format!("{} hours", hours));
+        }
+        if let Some(minutes) = self.minutes {
+            parts.push(format!("{} minutes", minutes));
+        }
+        if let Some(seconds) = self.seconds {
+            parts.push(format!("{} seconds", seconds));
+        }
+        if let Some(milliseconds) = self.milliseconds {
+            parts.push(format!("{} milliseconds", milliseconds));
+        }
+        write!(f, "{}", parts.join(" "))
+    }
+}
 
 /// Represents a value that can be either a Duration or an ISO 8601 duration expression
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -72,5 +149,13 @@ impl Default for OneOfDurationOrIso8601Expression {
     fn default() -> Self {
         // Choose a default variant
         OneOfDurationOrIso8601Expression::Duration(Duration::default())
+    }
+}
+impl fmt::Display for OneOfDurationOrIso8601Expression {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            OneOfDurationOrIso8601Expression::Duration(duration) => write!(f, "{}", duration),
+            OneOfDurationOrIso8601Expression::Iso8601Expression(expr) => write!(f, "{}", expr),
+        }
     }
 }

@@ -318,13 +318,13 @@ pub struct ListenerDefinition{
 
     /// Gets/sets the listener's target
     #[serde(rename = "to")]
-    pub to_: EventConsumptionStrategyDefinition
+    pub to: EventConsumptionStrategyDefinition
 
 }
 impl ListenerDefinition {
-    pub fn new(to_: EventConsumptionStrategyDefinition) -> Self{
+    pub fn new(to: EventConsumptionStrategyDefinition) -> Self{
         Self{
-            to_
+            to
         }
     }
 }
@@ -358,6 +358,14 @@ pub struct RaiseErrorDefinition{
     /// Gets/sets the error to raise
     #[serde(rename = "error")]
     pub error: OneOfErrorDefinitionOrReference
+
+}
+impl RaiseErrorDefinition{
+
+    /// Initializes a new RaiseErrorDefinition
+    pub fn new(error: OneOfErrorDefinitionOrReference) -> Self{
+        Self { error }
+    }
 
 }
 
@@ -749,7 +757,7 @@ pub struct WaitTaskDefinition{
 
     /// Gets/sets the amount of time to wait before resuming workflow
     #[serde(rename = "duration")]
-    pub duration: Duration
+    pub duration: OneOfDurationOrIso8601Expression
 
 }
 impl TypedTaskDefinition for WaitTaskDefinition {
@@ -758,7 +766,7 @@ impl TypedTaskDefinition for WaitTaskDefinition {
     }
 }
 impl WaitTaskDefinition {
-    pub fn new(duration: Duration) -> Self{
+    pub fn new(duration: OneOfDurationOrIso8601Expression) -> Self{
         Self { 
             duration
         }
