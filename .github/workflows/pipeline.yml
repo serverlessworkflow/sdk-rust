@@ -68,11 +68,11 @@ jobs:
         override: true
 
     - name: Publish Core Package
-      run: cargo publish -package serverless_workflow_core --allow-dirty
+      run: cargo publish --package serverless_workflow_core --allow-dirty
       env:
         CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
     - name: Publish Builders Package
-      run: cargo publish -package serverless_workflow_builders --allow-dirty
+      run: cargo publish --package serverless_workflow_builders --allow-dirty
       env:
         CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
