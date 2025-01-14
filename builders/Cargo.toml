@@ -1,5 +1,5 @@
 [package]
-name = "serverless-workflow-builders"
+name = "serverless_workflow_builders"
 version = "1.0.0-alpha6"
 edition = "2021"
 authors = ["The Serverless Workflow Authors <cncf.serverless.workflow@gmail.com>"]
@@ -12,6 +12,6 @@ keywords = ["serverless-workflow", "serverless", "workflow", "dsl", "sdk", "buil
 categories = ["dsl", "sdk", "builders", "services"]
 
 [dependencies]
-serverless_workflow_core = { path = "../core" }
+serverless_workflow_core = { path = "../core", version = "1.0.0-alpha6" }
 serde_json = "1.0" 
 serde_yaml = "0.9"
