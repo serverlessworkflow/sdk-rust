@@ -1,18 +1,17 @@
 [package]
-name = "serverless_workflow_core"
+name = "serverless-workflow-builders"
 version = "1.0.0-alpha6"
 edition = "2021"
 authors = ["The Serverless Workflow Authors <cncf.serverless.workflow@gmail.com>"]
-description = "Contains Serverless Workflow DSL models"
+description = "Contains services used to build ServerlessWorkflow workflow definitions programatically"
 homepage = "https://serverlessworkflow.io"
 repository = "https://github.com/serverlessworkflow/sdk-rust"
 documentation = "https://github.com/serverlessworkflow/sdk-rust"
 license = "Apache-2.0"
-keywords = ["serverless-workflow", "serverless", "workflow", "dsl", "sdk", "models", "core"]
-categories = ["dsl", "sdk", "models", "core"]
+keywords = ["serverless-workflow", "serverless", "workflow", "dsl", "sdk", "builders", "services"]
+categories = ["dsl", "sdk", "builders", "services"]
 
 [dependencies]
-serde = "1.0"
-serde_derive = "1.0"
+serverless_workflow_core = { path = "../core" }
 serde_json = "1.0" 
 serde_yaml = "0.9"

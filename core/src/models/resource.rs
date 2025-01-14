@@ -7,7 +7,11 @@ pub struct ExternalResourceDefinition{
 
     /// Gets/sets the external resource's name, if any
     #[serde(rename = "name", skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>
+    pub name: Option<String>,
+
+    /// Gets/sets the endpoint at which to get the defined resource
+    #[serde(rename = "endpoint")]
+    pub endpoint: OneOfEndpointDefinitionOrUri
 
 }
 
@@ -28,15 +32,15 @@ pub struct EndpointDefinition{
 /// Represents a value that can be either an EndpointDefinition or an Uri
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum OneOfEndpointDefinitionUri{
+pub enum OneOfEndpointDefinitionOrUri{
     /// Variant holding an EndpointDefinition
-    EndpointDefinition(EndpointDefinition),
+    Endpoint(EndpointDefinition),
     /// Variant holding a URL
     Uri(String),
 }
-impl Default for OneOfEndpointDefinitionUri {
+impl Default for OneOfEndpointDefinitionOrUri {
     fn default() -> Self {
         // Choose a default variant. For example, default to an empty Uri.
-        OneOfEndpointDefinitionUri::Uri(String::new())
+        OneOfEndpointDefinitionOrUri::Uri(String::new())
     }
 }

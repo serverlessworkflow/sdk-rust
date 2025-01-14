@@ -1,5 +1,7 @@
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
+use crate::models::any::*;
+use crate::models::authentication::*;
 use crate::models::catalog::*;
 use crate::models::duration::*;
 use crate::models::error::*;
@@ -11,9 +13,6 @@ use crate::models::output::*;
 use crate::models::retry::*;
 use crate::models::task::*;
 use crate::models::timeout::*;
-
-use super::any::AnyValue;
-use super::authentication::AuthenticationPolicyDefinition;
 
 /// Gets the namespace to use by default for workflow definitions
 pub const DEFAULT_NAMESPACE: &str = "default";

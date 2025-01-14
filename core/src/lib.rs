@@ -19,7 +19,7 @@ mod unit_tests {
         let mut workflow = WorkflowDefinition::new(document);
         workflow.do_ = Map::new();
         workflow.do_.add("callTask".to_string(), TaskDefinition::Call(CallTaskDefinition::new("http", None, Some(true))));
-        workflow.do_.add("doTask".to_string(), TaskDefinition::Do(DoTaskDefinition::new(Map::from(vec![("set".to_string(), TaskDefinition::Wait(WaitTaskDefinition::new(Duration::default())))]))));
+        workflow.do_.add("doTask".to_string(), TaskDefinition::Do(DoTaskDefinition::new(Map::from(vec![("set".to_string(), TaskDefinition::Wait(WaitTaskDefinition::new(OneOfDurationOrIso8601Expression::Duration(Duration::default()))))]))));
         let json_serialization_result = serde_json::to_string_pretty(&workflow);
         let yaml_serialization_result = serde_yaml::to_string(&workflow);
         assert!(json_serialization_result.is_ok(), "JSON Serialization failed: {:?}", json_serialization_result.err());

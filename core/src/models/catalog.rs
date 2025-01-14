@@ -10,6 +10,6 @@ pub struct CatalogDefinition{
 
     /// Gets/sets the endpoint that defines the root URL at which the catalog is located
     #[serde(rename = "endpoint")]
-    pub endpoint: OneOfEndpointDefinitionUri
+    pub endpoint: OneOfEndpointDefinitionOrUri
 
 }
