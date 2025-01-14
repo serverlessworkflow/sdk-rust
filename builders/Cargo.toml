@@ -1,7 +1,15 @@
 [package]
 name = "serverless-workflow-builders"
-version = "0.1.0"
+version = "1.0.0-alpha6"
 edition = "2021"
+authors = ["The Serverless Workflow Authors <cncf.serverless.workflow@gmail.com>"]
+description = "Contains services used to build ServerlessWorkflow workflow definitions programatically"
+homepage = "https://serverlessworkflow.io"
+repository = "https://github.com/serverlessworkflow/sdk-rust"
+documentation = "https://github.com/serverlessworkflow/sdk-rust"
+license = "Apache-2.0"
+keywords = ["serverless-workflow", "serverless", "workflow", "dsl", "sdk", "builders", "services"]
+categories = ["dsl", "sdk", "builders", "services"]
 
 [dependencies]
 serverless_workflow_core = { path = "../core" }
