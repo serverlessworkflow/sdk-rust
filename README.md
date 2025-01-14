@@ -16,21 +16,14 @@ Add the desired crate(s) to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-serverless-workflow-core = "0.1"
+serverless-workflow-core = "1.0.0-alpha6"
 ```
 
 ### Builders:
 
 ```toml
 [dependencies]
-serverless-workflow-builders = "0.1"
-```
-
-### IO:
-
-```toml
-[dependencies]
-serverless-workflow-io = "0.1"
+serverless-workflow-builders = "1.0.0-alpha6"
 ```
 
 ## Features
