@@ -488,6 +488,10 @@ pub struct ContainerProcessDefinition{
     #[serde(rename = "image")]
     pub image: String,
 
+    /// Gets/sets the name of the container to run
+    #[serde(rename = "name")]
+    pub name: Option<String>,
+
     /// Gets/sets the command, if any, to execute on the container
     #[serde(rename = "command", skip_serializing_if = "Option::is_none")]
     pub command: Option<String>,
@@ -506,9 +510,10 @@ pub struct ContainerProcessDefinition{
 
 }
 impl ContainerProcessDefinition {
-    pub fn new(image: &str, command: Option<String>, ports: Option<HashMap<u16, u16>>, volumes: Option<HashMap<String, String>>, environment: Option<HashMap<String, String>>) -> Self{
+    pub fn new(image: &str, name: Option<String>, command: Option<String>, ports: Option<HashMap<u16, u16>>, volumes: Option<HashMap<String, String>>, environment: Option<HashMap<String, String>>) -> Self{
         Self { 
             image: image.to_string(), 
+            name,
             command, 
             ports, 
             volumes, 
@@ -535,7 +540,7 @@ pub struct ScriptProcessDefinition{
 
     /// Gets/sets a key/value mapping of the arguments, if any, to pass to the script to run
     #[serde(rename = "arguments", skip_serializing_if = "Option::is_none")]
-    pub arguments: Option<Vec<String>>,
+    pub arguments: Option<HashMap<String, String>>,
 
     /// Gets/sets a key/value mapping of the environment variables, if any, to use when running the configured process
     #[serde(rename = "environment", skip_serializing_if = "Option::is_none")]
@@ -545,7 +550,7 @@ pub struct ScriptProcessDefinition{
 impl ScriptProcessDefinition {
 
     /// Initializes a new script from code
-    pub fn from_code(language: &str, code: String, arguments: Option<Vec<String>>, environment: Option<HashMap<String, String>>) -> Self{
+    pub fn from_code(language: &str, code: String, arguments: Option<HashMap<String, String>>, environment: Option<HashMap<String, String>>) -> Self{
         Self { 
             language: language.to_string(), 
             code: Some(code), 
@@ -556,7 +561,7 @@ impl ScriptProcessDefinition {
     }
 
     /// Initializes a new script from an external resource
-    pub fn from_source(language: &str, source: ExternalResourceDefinition, arguments: Option<Vec<String>>, environment: Option<HashMap<String, String>>) -> Self{
+    pub fn from_source(language: &str, source: ExternalResourceDefinition, arguments: Option<HashMap<String, String>>, environment: Option<HashMap<String, String>>) -> Self{
         Self { 
             language: language.to_string(), 
             code: None, 
@@ -641,9 +646,9 @@ impl TypedTaskDefinition for SetTaskDefinition {
     }
 }
 impl SetTaskDefinition {
-    pub fn new(set: HashMap<String, AnyValue>) -> Self{
+    pub fn new() -> Self{
         Self { 
-            set
+            set: HashMap::new()
         }
     }
 }
@@ -663,9 +668,9 @@ impl TypedTaskDefinition for SwitchTaskDefinition {
     }
 }
 impl SwitchTaskDefinition {
-    pub fn new(switch: Map<String, SwitchCaseDefinition>) -> Self{
+    pub fn new() -> Self{
         Self { 
-            switch
+            switch: Map::new()
         }
     }
 }

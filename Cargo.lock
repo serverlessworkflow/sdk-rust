@@ -109,6 +109,8 @@ dependencies = [
 name = "serverless-workflow-builders"
 version = "0.1.0"
 dependencies = [
+ "serde_json",
+ "serde_yaml",
  "serverless_workflow_core",
 ]
 

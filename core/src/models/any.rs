@@ -20,8 +20,8 @@ pub enum AnyValue {
     Float64(f64),
     Vec(Vec<AnyValue>),
     HashMap(std::collections::HashMap<String, AnyValue>),
-    JsonValue(JsonValue),
-    YamlValue(YamlValue)
+    Json(JsonValue),
+    Yaml(YamlValue)
 }
 impl Default for AnyValue {
     fn default() -> Self {

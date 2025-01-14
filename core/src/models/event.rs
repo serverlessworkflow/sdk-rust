@@ -16,7 +16,11 @@ pub struct EventConsumptionStrategyDefinition{
 
     /// Gets/sets the single event to consume
     #[serde(rename = "one", skip_serializing_if = "Option::is_none")]
-    pub one: Option<EventFilterDefinition>
+    pub one: Option<EventFilterDefinition>,
+
+    /// Gets/sets the consumption strategy, if any, that defines the events that must be consumed to stop listening
+    #[serde(rename = "until", skip_serializing_if = "Option::is_none")]
+    pub until: Option<Box<OneOfEventConsumptionStrategyDefinitionOrExpression>>
 
 }
 
@@ -70,5 +74,18 @@ impl EventDefinition {
         Self{
             with
         }
+    }
+}
+
+/// Represents a value that can be either a EventConsumptionStrategyDefinition or a runtime expression
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum OneOfEventConsumptionStrategyDefinitionOrExpression{
+    Strategy(EventConsumptionStrategyDefinition),
+    Expression(String)
+}
+impl Default for OneOfEventConsumptionStrategyDefinitionOrExpression{
+    fn default() -> Self {
+        OneOfEventConsumptionStrategyDefinitionOrExpression::Expression(String::default())
     }
 }

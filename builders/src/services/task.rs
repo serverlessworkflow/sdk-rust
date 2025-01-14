@@ -1,9 +1,11 @@
+use crate::services::authentication::*;
 use serverless_workflow_core::models::any::*;
 use serverless_workflow_core::models::duration::*;
-use serverless_workflow_core::models::error::ErrorDefinition;
-use serverless_workflow_core::models::error::OneOfErrorDefinitionOrReference;
+use serverless_workflow_core::models::error::*;
 use serverless_workflow_core::models::event::*;
 use serverless_workflow_core::models::map::*;
+use serverless_workflow_core::models::resource::*;
+use serverless_workflow_core::models::retry::*;
 use serverless_workflow_core::models::task::*;
 use std::collections::HashMap;
 
@@ -120,6 +122,42 @@ impl GenericTaskDefinitionBuilder{
         }
     }
 
+    /// Configures the task to set variables
+    pub fn set(&mut self) -> &mut SetTaskDefinitionBuilder{
+        let builder = SetTaskDefinitionBuilder::new();
+        self.builder = Some(TaskDefinitionBuilder::Set(builder));
+        if let Some(TaskDefinitionBuilder::Set(ref mut builder)) = self.builder{
+            builder
+        }
+        else {
+            unreachable!("Builder should always be set to Set");
+        }
+    }
+
+    /// Configures the task to branch the flow based on defined conditions
+    pub fn switch(&mut self) -> &mut SwitchTaskDefinitionBuilder{
+        let builder = SwitchTaskDefinitionBuilder::new();
+        self.builder = Some(TaskDefinitionBuilder::Switch(builder));
+        if let Some(TaskDefinitionBuilder::Switch(ref mut builder)) = self.builder{
+            builder
+        }
+        else{
+            unreachable!("Builder should always be set to Switch");
+        }
+    }
+
+    /// Configures the task to try executing a specific task, and handle potential errors
+    pub fn try_(&mut self) -> &mut TryTaskDefinitionBuilder{
+        let builder = TryTaskDefinitionBuilder::new();
+        self.builder = Some(TaskDefinitionBuilder::Try(builder));
+        if let Some(TaskDefinitionBuilder::Try(ref mut builder)) = self.builder{
+            builder
+        }
+        else{
+            unreachable!("Builder should always be set to Try");
+        }
+    }
+
     /// Configures the task to wait a defined amount of time
     pub fn wait(&mut self, duration: OneOfDurationOrIso8601Expression) -> &mut WaitTaskDefinitionBuilder{
         let builder = WaitTaskDefinitionBuilder::new(duration);
@@ -144,6 +182,9 @@ impl GenericTaskDefinitionBuilder{
                 TaskDefinitionBuilder::Listen(builder) => builder.build(),
                 TaskDefinitionBuilder::Raise(builder) => builder.build(),
                 TaskDefinitionBuilder::Run(builder) => builder.build(),
+                TaskDefinitionBuilder::Set(builder) => builder.build(),
+                TaskDefinitionBuilder::Switch(builder) => builder.build(),
+                TaskDefinitionBuilder::Try(builder) => builder.build(),
                 TaskDefinitionBuilder::Wait(builder) => builder.build()
             } 
         } 
@@ -164,6 +205,9 @@ pub enum TaskDefinitionBuilder{
     Listen(ListenTaskDefinitionBuilder),
     Raise(RaiseTaskDefinitionBuilder),
     Run(RunTaskDefinitionBuilder),
+    Set(SetTaskDefinitionBuilder),
+    Switch(SwitchTaskDefinitionBuilder),
+    Try(TryTaskDefinitionBuilder),
     Wait(WaitTaskDefinitionBuilder)
 }
 
@@ -410,8 +454,8 @@ impl RunTaskDefinitionBuilder{
 
     /// Configures the task to run the specified container
     pub fn container(&mut self) -> &mut ContainerProcessDefinitionBuilder{
-        let &mut builder = ContainerProcessDefinitionBuilder::new();
-        if let Some(ProcessDefinitionBuilder::Container(ref mut container_builder)) = self.builder{
+        self.builder = Some(ProcessDefinitionBuilder::Container(ContainerProcessDefinitionBuilder::new()));
+        if let Some(ProcessDefinitionBuilder::Container(ref mut container_builder)) = self.builder {
             container_builder
         }
         else {
@@ -421,8 +465,8 @@ impl RunTaskDefinitionBuilder{
 
     /// Configures the task to run the specified script
     pub fn script(&mut self) -> &mut ScriptProcessDefinitionBuilder{
-        let &mut builder = ScriptProcessDefinitionBuilder::new();
-        if let Some(ProcessDefinitionBuilder::Script(ref mut script_builder)) = self.builder{
+        self.builder = Some(ProcessDefinitionBuilder::Script(ScriptProcessDefinitionBuilder::new()));
+        if let Some(ProcessDefinitionBuilder::Script(ref mut script_builder)) = self.builder {
             script_builder
         }
         else {
@@ -432,8 +476,8 @@ impl RunTaskDefinitionBuilder{
 
     /// Configures the task to run the specified shell command
     pub fn shell(&mut self) -> &mut ShellProcessDefinitionBuilder{
-        let &mut builder = ShellProcessDefinitionBuilder::new();
-        if let Some(ProcessDefinitionBuilder::Shell(ref mut shell_builder)) = self.builder{
+        self.builder = Some(ProcessDefinitionBuilder::Shell(ShellProcessDefinitionBuilder::new()));
+        if let Some(ProcessDefinitionBuilder::Shell(ref mut shell_builder)) = self.builder {
             shell_builder
         }
         else {
@@ -443,8 +487,8 @@ impl RunTaskDefinitionBuilder{
 
     /// Configures the task to run the specified workflow
     pub fn workflow(&mut self) -> &mut WorkflowProcessDefinitionBuilder{
-        let &mut builder = WorkflowProcessDefinitionBuilder::new();
-        if let Some(ProcessDefinitionBuilder::Workflow(ref mut workflow_builder)) = self.builder{
+        self.builder = Some(ProcessDefinitionBuilder::Workflow(WorkflowProcessDefinitionBuilder::new()));
+        if let Some(ProcessDefinitionBuilder::Workflow(ref mut workflow_builder)) = self.builder {
             workflow_builder
         }
         else {
@@ -454,14 +498,113 @@ impl RunTaskDefinitionBuilder{
 
     /// Builds the configured RunTaskDefinition
     pub fn build(self) -> TaskDefinition{
-        if let builder = self.builder{
-            let process = builder.build();
+        if let Some(builder) = self.builder {
+            let process = match builder {
+                ProcessDefinitionBuilder::Container(builder) => builder.build(),
+                ProcessDefinitionBuilder::Script(builder) => builder.build(),
+                ProcessDefinitionBuilder::Shell(builder) => builder.build(),
+                ProcessDefinitionBuilder::Workflow(builder) => builder.build()
+            };
             TaskDefinition::Run(process)
         }
         else{
             panic!("The process to run must be configured");
         }
     } 
+
+}
+
+/// Represents the service used to build SetTaskDefinitions
+pub struct SetTaskDefinitionBuilder{
+    task: SetTaskDefinition
+}
+impl SetTaskDefinitionBuilder{
+
+    /// Initializes a new SetTaskDefinition
+    pub fn new() -> Self{
+        Self { task: SetTaskDefinition::new() }
+    }
+
+    /// Sets the specified variable
+    pub fn variable(&mut self, name: &str, value: AnyValue) -> &mut Self{
+        self.task.set.insert(name.to_string(), value);
+        self
+    }
+
+    /// Configures the task to set the specified variables
+    pub fn variables(&mut self, variables: HashMap<String, AnyValue>) -> &mut Self{
+        self.task.set = variables;
+        self
+    }
+
+    /// Builds a new SetTaskDefinition
+    pub fn build(self) -> TaskDefinition{
+        TaskDefinition::Set(self.task)
+    }
+
+}
+
+/// Represents the service used to build SwitchTaskDefinitions
+pub struct SwitchTaskDefinitionBuilder{
+    task: SwitchTaskDefinition
+}
+impl SwitchTaskDefinitionBuilder{
+
+    /// Initializes a new SwitchTaskDefinition
+    pub fn new() -> Self{
+        Self { task: SwitchTaskDefinition::new() }
+    }
+
+    /// Adds a new casev
+    pub fn case<F>(&mut self, name: &str, setup: F) -> &mut Self
+    where F: FnOnce(&mut SwitchCaseDefinitionBuilder){
+        let mut builder = SwitchCaseDefinitionBuilder::new();
+        setup(&mut builder);
+        let case = builder.build();
+        self.task.switch.add(name.to_string(), case);
+        self
+    }
+
+    /// Builds a new SwitchTaskDefinition
+    pub fn build(self) -> TaskDefinition{
+        TaskDefinition::Switch(self.task)
+    }
+
+}
+
+/// Represents the service used to build TryTaskDefinitions
+pub struct TryTaskDefinitionBuilder{
+    task: TryTaskDefinition
+}
+impl TryTaskDefinitionBuilder{
+
+    /// Initializes a new TryTaskDefinition
+    pub fn new() -> Self{
+        Self { task: TryTaskDefinition::default() }
+    }
+
+    /// Configures the task to try executing the specified tasks 
+    pub fn do_<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut TaskDefinitionMapBuilder){
+        let mut builder = TaskDefinitionMapBuilder::new();
+        setup(&mut builder);
+        self.task.try_ = builder.build();
+        self
+    }
+
+    /// Configures the task to catch defined errors
+    pub fn catch<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut ErrorCatcherDefinitionBuilder){
+        let mut builder = ErrorCatcherDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.catch = builder.build();
+        self
+    }
+
+    /// Builds a new TryTaskDefinition
+    pub fn build(self) -> TaskDefinition{
+        TaskDefinition::Try(self.task)
+    }
 
 }
 
@@ -545,13 +688,15 @@ impl TaskDefinitionMapBuilder{
 pub struct EventConsumptionStrategyDefinitionBuilder{
     all: Option<EventFilterDefinitionCollectionBuilder>,
     any: Option<EventFilterDefinitionCollectionBuilder>,
-    one: Option<EventFilterDefinitionBuilder>
+    one: Option<EventFilterDefinitionBuilder>,
+    until_condition: Option<String>,
+    until_events: Option<EventConsumptionStrategyDefinition>
 }
 impl EventConsumptionStrategyDefinitionBuilder{
 
     /// Initializes a new EventConsumptionStrategyDefinitionBuilder
     pub fn new() -> Self{
-        Self { all: None, any: None, one: None }
+        Self { all: None, any: None, one: None, until_condition: None, until_events: None }
     }
 
     /// Configures the task to listen for all of the defined events
@@ -578,7 +723,7 @@ impl EventConsumptionStrategyDefinitionBuilder{
         }
     }
 
-     /// Configures the task to listen for one single event
+    /// Configures the task to listen for one single event
     pub fn one(&mut self) -> &mut EventFilterDefinitionBuilder {
         let builder = EventFilterDefinitionBuilder::new();
         self.one = Some(builder);
@@ -590,6 +735,19 @@ impl EventConsumptionStrategyDefinitionBuilder{
         }
     }
 
+    /// Configures the task to listen to any events until the specified events are consumed
+    pub fn until<F>(&mut self, setup: F)
+    where F: FnOnce(&mut EventConsumptionStrategyDefinitionBuilder){
+        let mut builder = EventConsumptionStrategyDefinitionBuilder::new();
+        setup(&mut builder);
+        self.until_events = Some(builder.build());
+    }
+
+    /// Configures the task to listen to any events until the specified condition matches
+    pub fn until_condition_matches(&mut self, expression: &str){
+        self.until_condition = Some(expression.to_string());
+    }
+
     /// Builds the configured EventConsumptionStrategyDefinition
     pub fn build(self) -> EventConsumptionStrategyDefinition{
         let mut strategy = EventConsumptionStrategyDefinition::default();
@@ -598,6 +756,12 @@ impl EventConsumptionStrategyDefinitionBuilder{
         }
         else if let Some(any_builder) = self.any {
             strategy.any = Some(any_builder.build());
+            if let Some(expression) = self.until_condition{
+                strategy.until = Some(Box::new(OneOfEventConsumptionStrategyDefinitionOrExpression::Expression(expression.to_string())));
+            }
+            else if let Some(until_events) = self.until_events{
+                strategy.until = Some(Box::new(OneOfEventConsumptionStrategyDefinitionOrExpression::Strategy(until_events)));
+            }
         }
         else if let Some(one_builder) = self.one {
             strategy.one = Some(one_builder.build());
@@ -731,52 +895,767 @@ pub enum ProcessDefinitionBuilder{
 
 ///Represents the service used to build ContainerProcessDefinitions
 pub struct ContainerProcessDefinitionBuilder{
-
+    process: ContainerProcessDefinition
 }
 impl ContainerProcessDefinitionBuilder{
 
-    /// Builds the configured ContainerProcessDefinition
-    pub fn build() -> ContainerProcessDefinition{
+    /// Initializes a new ContainerProcessDefinitionBuilder
+    pub fn new() -> Self{
+        Self { process: ContainerProcessDefinition::default() }
+    }
 
+    /// Configures the name of the container to spawn
+    pub fn with_name(&mut self, name: &str) -> &mut Self{
+        self.process.name = Some(name.to_string());
+        self
+    }
+
+    /// Configures the container to use the specified image
+    pub fn with_image(&mut self, image: &str) -> &mut Self{
+        self.process.image = image.to_string();
+        self
+    }
+
+    /// Configures the command, if any, to execute on the container
+    pub fn with_command(&mut self, command: &str) -> &mut Self{
+        self.process.command = Some(command.to_string());
+        self
+    }
+
+    /// Adds the specified container port mapping
+    pub fn with_port(&mut self, host_port: u16, container_port: u16) -> &mut Self{
+        if self.process.ports.is_none(){
+            self.process.ports = Some(HashMap::new());
+        }
+        if let Some(ports) = &mut self.process.ports {
+            ports.insert(host_port, container_port);
+        }
+        self
+    }
+
+    /// Sets the container's port mapping
+    pub fn with_ports(&mut self, ports: HashMap<u16, u16>) -> &mut Self{
+        self.process.ports = Some(ports);
+        self
+    }
+
+    /// Adds the specified volume to the container
+    pub fn with_volume(&mut self, key: &str, value: &str) -> &mut Self{
+        if self.process.volumes.is_none(){
+            self.process.volumes = Some(HashMap::new());
+        }
+        if let Some(volumes) = &mut self.process.volumes {
+            volumes.insert(key.to_string(), value.to_string());
+        }
+        self
+    }
+
+    /// Sets the container's volumes
+    pub fn with_volumes(&mut self, volumes: HashMap<String, String>) -> &mut Self{
+        self.process.volumes = Some(volumes);
+        self
+    }
+
+    /// Adds the specified environment variable to the container
+    pub fn with_environment(&mut self, name: &str, value: &str) -> &mut Self{
+        if self.process.environment.is_none(){
+            self.process.environment = Some(HashMap::new());
+        }
+        if let Some(environment) = &mut self.process.environment {
+            environment.insert(name.to_string(), value.to_string());
+        }
+        self
+    }
+
+    /// Sets the container's environment variables
+    pub fn with_environment_variables(&mut self, environment: HashMap<String, String>) -> &mut Self{
+        self.process.environment = Some(environment);
+        self
+    }
+
+    /// Builds the configured RunTaskDefinition
+    pub fn build(self) -> RunTaskDefinition{
+        let mut run_task = RunTaskDefinition::default();
+        run_task.run.container = Some(self.process);
+        run_task
     }
 
 }
 
 ///Represents the service used to build ScriptProcessDefinitions
 pub struct ScriptProcessDefinitionBuilder{
-
+    process: ScriptProcessDefinition
 }
 impl ScriptProcessDefinitionBuilder{
 
-    /// Builds the configured ScriptProcessDefinition
-    pub fn build() -> ScriptProcessDefinition{
+    /// Initializes a new ScriptProcessDefinitionBuilder
+    pub fn new() -> Self{
+        Self { process: ScriptProcessDefinition::default() }
+    }
 
+    /// Sets the language of the script to run
+    pub fn with_language(&mut self, language: &str) -> &mut Self{
+        self.process.language = language.to_string();
+        self
+    }
+
+    /// Sets the code of the script to run
+    pub fn with_code(&mut self, code: &str) -> &mut Self{
+        self.process.code = Some(code.to_string());
+        self
+    }
+
+    /// Sets the source of the script to run
+    pub fn with_source<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut ExternalResourceDefinitionBuilder){
+        let mut builder = ExternalResourceDefinitionBuilder::new();
+        setup(&mut builder);
+        let resource = builder.build();
+        self.process.source = Some(resource); 
+        self
+    }
+
+    /// Adds a new argument to execute the script with
+    pub fn with_argument(&mut self, key: &str, value: &str) -> &mut Self{
+        if self.process.arguments.is_none(){
+            self.process.arguments = Some(HashMap::new());
+        }
+        if let Some(arguments) = &mut self.process.arguments {
+            arguments.insert(key.to_string(), value.to_string());
+        }
+        self
+    }
+
+    /// Sets the arguments of the script to execute
+    pub fn with_arguments(&mut self, arguments: HashMap<String, String>) -> &mut Self{
+        self.process.arguments = Some(arguments);
+        self
+    }
+
+    /// Adds the specified environment variable to the process
+    pub fn with_environment(&mut self, name: &str, value: &str) -> &mut Self{
+        if self.process.environment.is_none(){
+            self.process.environment = Some(HashMap::new());
+        }
+        if let Some(environment) = &mut self.process.environment {
+            environment.insert(name.to_string(), value.to_string());
+        }
+        self
+    }
+
+    /// Sets the process's environment variables
+    pub fn with_environment_variables(&mut self, environment: HashMap<String, String>) -> &mut Self{
+        self.process.environment = Some(environment);
+        self
+    }
+
+    /// Builds the configured RunTaskDefinition
+    pub fn build(self) -> RunTaskDefinition{
+        let mut run_task = RunTaskDefinition::default();
+        run_task.run.script = Some(self.process);
+        run_task
     }
 
 }
 
 ///Represents the service used to build ShellProcessDefinitions
 pub struct ShellProcessDefinitionBuilder{
-
+    process: ShellProcessDefinition
 }
 impl ShellProcessDefinitionBuilder{
 
-    /// Builds the configured ShellProcessDefinition
-    pub fn build() -> ShellProcessDefinition{
+    /// Initializes a new ShellProcessDefinitions
+    pub fn new() -> Self{
+        Self { process: ShellProcessDefinition::default() }
+    }
 
+    /// Configures the task to execute the specified shell command
+    pub fn with_command(&mut self, command: &str) -> &mut Self{
+        self.process.command = command.to_string();
+        self
+    }
+
+    /// Adds a new argument to execute the shell command with
+    pub fn with_argument(&mut self, argument: &str) -> &mut Self{
+        if self.process.arguments.is_none(){
+            self.process.arguments = Some(Vec::new());
+        }
+        if let Some(arguments) = &mut self.process.arguments {
+            arguments.push(argument.to_string());
+        }
+        self
+    }
+
+    /// Sets the arguments of the shell command to execute
+    pub fn with_arguments(&mut self, arguments: Vec<String>) -> &mut Self{
+        self.process.arguments = Some(arguments);
+        self
+    }
+
+    /// Adds the specified environment variable to the process
+    pub fn with_environment(&mut self, name: &str, value: &str) -> &mut Self{
+        if self.process.environment.is_none(){
+            self.process.environment = Some(HashMap::new());
+        }
+        if let Some(environment) = &mut self.process.environment {
+            environment.insert(name.to_string(), value.to_string());
+        }
+        self
+    }
+
+    /// Sets the process's environment variables
+    pub fn with_environment_variables(&mut self, environment: HashMap<String, String>) -> &mut Self{
+        self.process.environment = Some(environment);
+        self
+    }
+
+    /// Builds the configured RunTaskDefinition
+    pub fn build(self) -> RunTaskDefinition{
+        let mut run_task = RunTaskDefinition::default();
+        run_task.run.shell = Some(self.process);
+        run_task
     }
 
 }
 
 ///Represents the service used to build WorkflowProcessDefinitions
 pub struct WorkflowProcessDefinitionBuilder{
-
+    process: WorkflowProcessDefinition
 }
 impl WorkflowProcessDefinitionBuilder{
 
-    /// Builds the configured WorkflowProcessDefinitionBuilder
-    pub fn build() -> WorkflowProcessDefinitionBuilder{
-
+    /// Initializes a new WorkflowProcessDefinitions
+    pub fn new() -> Self{
+        Self { process: WorkflowProcessDefinition::default() }
     }
+
+    /// Configures the task to run the workflow with the specified namespace
+    pub fn with_namespace(&mut self, namespace: &str) -> &mut Self{
+        self.process.namespace = namespace.to_string();
+        self
+    }
+
+    /// Configures the task to run the workflow with the specified name
+    pub fn with_name(&mut self, name: &str) -> &mut Self{
+        self.process.name = name.to_string();
+        self
+    }
+
+    /// Configures the task to run the workflow with the specified version
+    pub fn with_version(&mut self, version: &str) -> &mut Self{
+        self.process.version = version.to_string();
+        self
+    }
+
+    /// Sets the input of the workflow to run
+    pub fn with_input(&mut self, input: AnyValue) -> &mut Self{
+        self.process.input = Some(input);
+        self
+    }
+
+    /// Builds the configured RunTaskDefinition
+    pub fn build(self) -> RunTaskDefinition{
+        let mut run_task = RunTaskDefinition::default();
+        run_task.run.workflow = Some(self.process);
+        run_task
+    }
+
+}
+
+/// Represents the service used to build ExternalResourceDefinitions
+pub struct ExternalResourceDefinitionBuilder{
+    resource: ExternalResourceDefinition
+}
+impl ExternalResourceDefinitionBuilder{
+
+    /// Initializes a new ExternalResourceDefinitionBuilder
+    pub fn new() -> Self{
+        Self { resource:ExternalResourceDefinition::default() }
+    }
+
+    /// Configures the name of the referenced external resource
+    pub fn with_name(&mut self, name: &str) -> &mut Self{
+        self.resource.name = Some(name.to_string());
+        self
+    }
+
+    /// Configures the endpoint at which to get the defined resource
+    pub fn with_endpoint<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut EndpointDefinitionBuilder){
+        let mut builder = EndpointDefinitionBuilder::new();
+        setup(&mut builder);
+        let endpoint = builder.build();
+        self.resource.endpoint = OneOfEndpointDefinitionOrUri::Endpoint(endpoint);
+        self
+    }
+
+    /// Configures the endpoint at which to get the defined resource
+    pub fn with_endpoint_uri(&mut self, uri: &str) -> &mut Self{
+        self.resource.endpoint = OneOfEndpointDefinitionOrUri::Uri(uri.to_string());
+        self
+    }
+
+    /// Builds the configured ExternalResourceDefinition
+    pub fn build(self) -> ExternalResourceDefinition{
+        self.resource
+    }
+
+}
+
+/// Represents the service used to build EndpointDefinitions
+pub struct EndpointDefinitionBuilder{
+    endpoint: EndpointDefinition
+}
+impl EndpointDefinitionBuilder{
+
+    /// Initializes a new EndpointDefinitionBuilder
+    pub fn new() -> Self{
+        Self { endpoint: EndpointDefinition::default() }
+    }
+
+    /// Sets the endpoint's <see cref="Uri"/>
+    pub fn with_uri(&mut self, uri: &str) -> &mut Self{
+        self.endpoint.uri = uri.to_string();
+        self
+    }
+
+    /// Configures the authentication policy used to access the configured endpoint
+    pub fn with_authentication<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut AuthenticationPolicyDefinitionBuilder){
+        let mut builder = AuthenticationPolicyDefinitionBuilder::new();
+        setup(&mut builder);
+        let authentication = builder.build();
+        self.endpoint.authentication = Some(authentication);
+        self
+    }
+
+    /// Builds the configured EndpointDefinition
+    pub fn build(self) -> EndpointDefinition{
+        self.endpoint
+    }
+
+}
+
+/// Represents the service used to build SwitchCaseDefinitions
+pub struct SwitchCaseDefinitionBuilder{
+    case: SwitchCaseDefinition
+}
+impl SwitchCaseDefinitionBuilder{
+
+    /// Initializes a new SwitchCaseDefinitionBuilder
+    pub fn new() -> Self{
+        Self { case: SwitchCaseDefinition::default() }
+    }
+
+    /// Sets a runtime expression that defines whether or not the case applies
+    pub fn when(&mut self, expression: &str) -> &mut Self{
+        self.case.when = Some(expression.to_string());
+        self
+    }
+
+    /// Sets the flow directive to execute when the case is matched
+    pub fn then(&mut self, directive: &str) -> &mut Self{
+        self.case.then = Some(directive.to_string());
+        self
+    }
+
+    /// Builds the configured SwitchCaseDefinition
+    pub fn build(self) -> SwitchCaseDefinition{
+        self.case
+    }
+
+}
+
+/// Represents the service used to build ErrorCatcherDefinitions
+pub struct ErrorCatcherDefinitionBuilder{
+    catch: ErrorCatcherDefinition
+}
+impl ErrorCatcherDefinitionBuilder{
+    
+    /// Initializes a new ErrorCatcherDefinitionBuilder
+    pub fn new() -> Self{
+        Self { catch: ErrorCatcherDefinition::default() }
+    }
+
+    /// Catches errors matching the specified filter
+    pub fn errors<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut ErrroFilterDefinitionBuilder){
+        let mut builder = ErrroFilterDefinitionBuilder::new();
+        setup(&mut builder);
+        self.catch.errors = Some(builder.build());
+        self
+    }
+
+    /// Sets the name of the variable that contains caught errors
+    pub fn as_(&mut self, variable: &str) -> &mut Self{
+        self.catch.as_ = Some(variable.to_string());
+        self
+    }
+
+    /// Sets the runtime expression used to determine whether to catch the filtered error
+    pub fn when(&mut self, expression: &str) -> &mut Self{
+        self.catch.when = Some(expression.to_string());
+        self
+    }
+
+    /// Sets the runtime expression used to determine whether not to catch the filtered error
+    pub fn except_when(&mut self, expression: &str) -> &mut Self{
+        self.catch.except_when = Some(expression.to_string());
+        self
+    }
+
+    /// Sets the reference to the retry policy to use
+    pub fn retry<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut RetryPolicyDefinitionBuilder){
+        let mut builder = RetryPolicyDefinitionBuilder::new();
+        setup(&mut builder);
+        self.catch.retry = Some(OneOfRetryPolicyDefinitionOrReference::Retry(builder.build()));
+        self
+    }
+
+    /// Sets the reference to the retry policy to use
+    pub fn retry_using(&mut self, reference: &str) -> &mut Self{
+        self.catch.retry = Some(OneOfRetryPolicyDefinitionOrReference::Reference(reference.to_string()));
+        self
+    }
+
+    /// Configures the tasks to execute the specified task after catching or after retry exhaustion
+    pub fn do_<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut TaskDefinitionMapBuilder){
+        let mut builder = TaskDefinitionMapBuilder::new();
+        setup(&mut builder);
+        self.catch.do_ = Some(builder.build());
+        self
+    }
+
+    /// Builds the configured ErrorCatcherDefinition
+    pub fn build(self) -> ErrorCatcherDefinition{
+        self.catch
+    }
+
+}
+
+/// Represents the service used to build ErrroFilterDefinitions
+pub struct ErrroFilterDefinitionBuilder{
+    filter: ErrorFilterDefinition
+}
+impl ErrroFilterDefinitionBuilder{
+
+    /// Initializes a new ErrroFilterDefinitionBuilder
+    pub fn new() -> Self{
+        Self { filter: ErrorFilterDefinition::default() }
+    }
+
+     /// Adds a new attribute filter
+     pub fn with(&mut self, name: &str, value: AnyValue) -> &mut Self{
+        if self.filter.with.is_none(){
+            self.filter.with = Some(HashMap::new());
+        }
+        if let Some(with) = &mut self.filter.with {
+            with.insert(name.to_string(), value);
+        }
+        self
+    }
+
+    /// Sets a name/value mapping of the attributes to filter errors by
+    pub fn with_attributes(&mut self, attributes: HashMap<String, AnyValue>) -> &mut Self{
+        self.filter.with = Some(attributes);
+        self
+    }
+
+    /// Builds the configured ErrorFilterDefinition
+    pub fn build(self) -> ErrorFilterDefinition{
+        self.filter
+    }
+
+}
+
+/// Represents the service used to build RetryPolicyDefinitions
+pub struct RetryPolicyDefinitionBuilder{
+    retry: RetryPolicyDefinition
+}
+impl RetryPolicyDefinitionBuilder{
+
+    /// Initializes a new RetryPolicyDefinitionBuilder
+    pub fn new() -> Self{
+        Self { retry: RetryPolicyDefinition::default() }
+    }
+
+    /// Sets the runtime expression used to determine whether to retry the filtered error
+    pub fn when(&mut self, expression: &str) -> &mut Self{
+        self.retry.when = Some(expression.to_string());
+        self
+    }
+
+    /// Sets the runtime expression used to determine whether not to retry the filtered error
+    pub fn except_when(&mut self, expression: &str) -> &mut Self{
+        self.retry.except_when = Some(expression.to_string());
+        self
+    }
+
+    /// Sets the limits of the retry policy to build
+    pub fn limit<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut RetryPolicyLimitDefinitionBuilder){
+        let mut builder = RetryPolicyLimitDefinitionBuilder::new();
+        setup(&mut builder);
+        self.retry.limit = Some(builder.build());
+        self
+    }
+
+    /// Sets the delay duration between retry attempts
+    pub fn delay(&mut self, duration: Duration) -> &mut Self{
+        self.retry.delay = Some(duration);
+        self
+    }
+
+    /// Sets the backoff strategy of the retry policy to build
+    pub fn backoff<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut GenericBackoffStrategyDefinitionBuilder){
+        let mut builder = GenericBackoffStrategyDefinitionBuilder::new();
+        setup(&mut builder);
+        self.retry.backoff = Some(builder.build());
+        self
+    }
+
+    /// Sets the jitter to apply to the retry policy to build
+    pub fn jitter<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut JitterDefinitionBuilder){
+        let mut builder = JitterDefinitionBuilder::new();
+        setup(&mut builder);
+        self.retry.jitter = Some(builder.build());
+        self
+    }
+
+    /// Builds the configured RetryPolicyDefinition
+    pub fn build(self) -> RetryPolicyDefinition{
+        self.retry
+    }
+    
+}
+
+/// Represents the service used to build RetryPolicyLimitDefinitions
+pub struct RetryPolicyLimitDefinitionBuilder{
+    limit: RetryPolicyLimitDefinition
+}
+impl RetryPolicyLimitDefinitionBuilder{
+
+    /// Initializes a new RetryPolicyLimitDefinitionBuilder
+    pub fn new() -> Self{
+        Self { limit: RetryPolicyLimitDefinition::default() }
+    }
+    
+    /// Configures retry attempts limits
+    pub fn attempt<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut RetryAttemptLimitDefinitionBuilder){
+        let mut builder = RetryAttemptLimitDefinitionBuilder::new();
+        setup(&mut builder);
+        self.limit.attempt = Some(builder.build());
+        self
+    }
+
+    /// Configures the maximum duration during which retrying is allowed
+    pub fn duration(&mut self, duration: Duration) -> &mut Self{
+        self.limit.duration = Some(duration);
+        self
+    }
+
+    /// Builds the configured RetryPolicyLimitDefinition
+    pub fn build(self) -> RetryPolicyLimitDefinition{
+        self.limit
+    } 
+
+}
+
+/// Represents the service used to build RetryAttemptLimitDefinitions
+pub struct RetryAttemptLimitDefinitionBuilder{
+    attempt: RetryAttemptLimitDefinition
+}
+impl RetryAttemptLimitDefinitionBuilder{
+
+    /// Initializes a new RetryAttemptLimitDefinitionBuilder
+    pub fn new() -> Self{
+        Self { attempt: RetryAttemptLimitDefinition::default() }
+    }
+    
+    /// Sets the maximum attempts count
+    pub fn count(&mut self, count: u16) -> &mut Self{
+        self.attempt.count = Some(count);
+        self
+    }
+
+    /// Sets the maximum duration per attempt
+    pub fn duration(&mut self, duration: Duration) -> &mut Self{
+        self.attempt.duration = Some(duration);
+        self
+    }
+
+    /// Builds the configured RetryAttemptLimitDefinition
+    pub fn build(self) -> RetryAttemptLimitDefinition{
+        self.attempt
+    } 
+
+}
+
+/// Represents the service used to build BackoffStrategyDefinitions
+pub struct GenericBackoffStrategyDefinitionBuilder{
+    builder: Option<BackoffStrategyDefinitionBuilder>
+}
+impl GenericBackoffStrategyDefinitionBuilder{
+
+    /// Initializes a new BackoffStrategyDefinitionBuilder
+    pub fn new() -> Self{
+        Self { builder: None }
+    }
+    
+    /// Configures a constant backoff strategy
+    pub fn constant(&mut self) -> &mut ConstantBackoffDefinitionBuilder{
+        let builder = ConstantBackoffDefinitionBuilder::new();
+        self.builder = Some(BackoffStrategyDefinitionBuilder::Constant(builder));
+        if let Some(BackoffStrategyDefinitionBuilder::Constant(ref mut builder)) = self.builder{
+            builder
+        }
+        else{
+            unreachable!("Builder should always be set to Constant");
+        }
+    }
+
+    /// Configures an exponential backoff strategy
+    pub fn exponential(&mut self) -> &mut ExponentialBackoffDefinitionBuilder{
+        let builder = ExponentialBackoffDefinitionBuilder::new();
+        self.builder = Some(BackoffStrategyDefinitionBuilder::Exponential(builder));
+        if let Some(BackoffStrategyDefinitionBuilder::Exponential(ref mut builder)) = self.builder{
+            builder
+        }
+        else{
+            unreachable!("Builder should always be set to Exponential");
+        }
+    }
+
+    /// Configures a linear backoff strategy
+    pub fn linear(&mut self) -> &mut LinearBackoffDefinitionBuilder{
+        let builder = LinearBackoffDefinitionBuilder::new();
+        self.builder = Some(BackoffStrategyDefinitionBuilder::Linear(builder));
+        if let Some(BackoffStrategyDefinitionBuilder::Linear(ref mut builder)) = self.builder{
+            builder
+        }
+        else{
+            unreachable!("Builder should always be set to Linear");
+        }
+    }
+
+    /// Builds the configured BackoffStrategyDefinitions
+    pub fn build(self) -> BackoffStrategyDefinition{
+        if let Some(builder) = self.builder{
+            match builder{
+                BackoffStrategyDefinitionBuilder::Constant(builder) => builder.build(),
+                BackoffStrategyDefinitionBuilder::Exponential(builder) => builder.build(),
+                BackoffStrategyDefinitionBuilder::Linear(builder) => builder.build(),
+            }
+        }
+        else{
+            unreachable!("The backoff strategy must be configured")
+        }
+    } 
+
+}
+
+/// Enumerates all supported BackoffStrategyDefinition builders
+pub enum BackoffStrategyDefinitionBuilder{
+    Constant(ConstantBackoffDefinitionBuilder),
+    Exponential(ExponentialBackoffDefinitionBuilder),
+    Linear(LinearBackoffDefinitionBuilder)
+}
+
+/// Represents the service used to build ConstantBackoffDefinitions
+pub struct ConstantBackoffDefinitionBuilder;
+impl ConstantBackoffDefinitionBuilder{
+
+    /// Initializes a new ConstantBackoffDefinitionBuilder
+    pub fn new() -> Self{
+        Self{}
+    }
+
+    /// Builds the configures ConstantBackoffDefinition
+    pub fn build(self) -> BackoffStrategyDefinition{
+        let mut strategy = BackoffStrategyDefinition::new();
+        strategy.constant = Some(ConstantBackoffDefinition::new());
+        strategy
+    }
+
+}
+
+/// Represents the service used to build ExponentialBackoffDefinitionBuilder
+pub struct ExponentialBackoffDefinitionBuilder;
+impl ExponentialBackoffDefinitionBuilder{
+
+    /// Initializes a new ExponentialBackoffDefinitionBuilder
+    pub fn new() -> Self{
+        Self{}
+    }
+
+    /// Builds the configures ExponentialBackoffDefinition
+    pub fn build(self) -> BackoffStrategyDefinition{
+        let mut strategy = BackoffStrategyDefinition::new();
+        strategy.exponential = Some(ExponentialBackoffDefinition::new());
+        strategy
+    }
+
+}
+
+/// Represents the service used to build LinearBackoffDefinition
+pub struct LinearBackoffDefinitionBuilder{
+    increment: Option<Duration>
+}
+impl LinearBackoffDefinitionBuilder{
+
+    /// Initializes a new LinearBackoffDefinitionBuilder
+    pub fn new() -> Self{
+        Self{ increment: None }
+    }
+
+    /// Sets the linear incrementation to the delay between retry attempts
+    pub fn with_increment(&mut self, increment: Duration) -> &mut Self{
+        self.increment = Some(increment);
+        self
+    }
+
+    /// Builds the configures LinearBackoffDefinition
+    pub fn build(self) -> BackoffStrategyDefinition{
+        let mut strategy = BackoffStrategyDefinition::new();
+        let mut linear = LinearBackoffDefinition::new();
+        linear.increment = self.increment;
+        strategy.linear = Some(linear);
+        strategy
+    }
+
+}
+
+/// Represents the service used to build JitterDefinitions
+pub struct JitterDefinitionBuilder{
+    jitter: JitterDefinition
+}
+impl JitterDefinitionBuilder{
+
+    /// Initializes a new JitterDefinitionBuilder
+    pub fn new() -> Self{
+        Self { jitter: JitterDefinition::default() }
+    }
+    
+    /// Sets the jitter range's minimum duration
+    pub fn from(&mut self, duration: Duration) -> &mut Self{
+        self.jitter.from = duration;
+        self
+    }
+
+    /// Sets the jitter range's maximum duration
+    pub fn to(&mut self, duration: Duration) -> &mut Self{
+        self.jitter.to = duration;
+        self
+    }
+
+    /// Builds the configured JitterDefinition
+    pub fn build(self) -> JitterDefinition{
+        self.jitter
+    } 
 
 }

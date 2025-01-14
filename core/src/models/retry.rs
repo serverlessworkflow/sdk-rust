@@ -15,7 +15,7 @@ pub struct RetryPolicyDefinition{
 
     /// Gets/sets the limits, if any, of the retry policy
     #[serde(rename = "limit", skip_serializing_if = "Option::is_none")]
-    pub limitlimit: Option<RetryPolicyLimitDefinition>,
+    pub limit: Option<RetryPolicyLimitDefinition>,
 
     /// Gets/sets the delay duration between retry attempts
     #[serde(rename = "delay", skip_serializing_if = "Option::is_none")]
@@ -27,7 +27,7 @@ pub struct RetryPolicyDefinition{
 
     /// Gets/sets the parameters, if any, that control the randomness or variability of the delay between retry attempts
     #[serde(rename = "jitter", skip_serializing_if = "Option::is_none")]
-    pub jitterjitter: Option<JitterDefinition>
+    pub jitter: Option<JitterDefinition>
 
 }
 
@@ -51,7 +51,7 @@ pub struct RetryAttemptLimitDefinition{
 
     /// Gets/sets the maximum attempts count
     #[serde(rename = "count", skip_serializing_if = "Option::is_none")]
-    pub count: Option<u64>,
+    pub count: Option<u16>,
 
     /// Gets/sets the duration limit, if any, for all retry attempts
     #[serde(rename = "duration", skip_serializing_if = "Option::is_none")]
@@ -76,16 +76,44 @@ pub struct BackoffStrategyDefinition{
     pub linear: Option<LinearBackoffDefinition>
 
 }
+impl BackoffStrategyDefinition{
+
+    /// Initializes a new BackoffStrategyDefinition
+    pub fn new() -> Self{
+        Self{
+            constant: None,
+            exponential: None,
+            linear: None
+        }
+    }
+
+}
 
 /// Represents the definition of a constant backoff
 #[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ConstantBackoffDefinition{
 
 }
+impl ConstantBackoffDefinition{
+
+    /// Initializes a new ConstantBackoffDefinition
+    pub fn new() -> Self{
+        Self{}
+    }
+
+}
 
 /// Represents the definition of an exponential backoff
 #[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ExponentialBackoffDefinition{
+
+}
+impl ExponentialBackoffDefinition{
+
+    /// Initializes a new ExponentialBackoffDefinition
+    pub fn new() -> Self{
+        Self{}
+    }
 
 }
 
@@ -96,6 +124,14 @@ pub struct LinearBackoffDefinition{
     /// Gets/sets the linear incrementation to the delay between retry attempts
     #[serde(rename = "increment", skip_serializing_if = "Option::is_none")]
     pub increment: Option<Duration>
+
+}
+impl LinearBackoffDefinition{
+
+    /// Initializes a new LinearBackoffDefinition
+    pub fn new() -> Self{
+        Self{ increment: None }
+    }
 
 }
 
