@@ -8,6 +8,9 @@ on:
     branches:
       - main  # Trigger on pull requests targeting the main branch
   workflow_dispatch: # Allow manual triggers
+  release:
+    types:
+      - published # Trigger on new release creation
 
 jobs:
   build-and-test:
@@ -51,7 +54,7 @@ jobs:
     name: Publish to crates.io
     needs: build-and-test
     runs-on: ubuntu-latest
-    if: github.event_name == 'release' && github.event.action == 'published'  # Ensure it only runs on release publish
+    if: github.event.action == 'published'
 
     steps:
     - name: Checkout repository
