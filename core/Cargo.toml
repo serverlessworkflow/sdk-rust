@@ -9,7 +9,7 @@ repository = "https://github.com/serverlessworkflow/sdk-rust"
 documentation = "https://github.com/serverlessworkflow/sdk-rust"
 license = "Apache-2.0"
 keywords = ["serverless-workflow", "sdk", "core"]
-categories = ["config", "parsing", "serialization", "data-structures", "api-bindings"]
+categories = ["config", "parsing", "data-structures", "api-bindings"]
 
 [dependencies]
 serde = "1.0"
