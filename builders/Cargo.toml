@@ -8,7 +8,7 @@ homepage = "https://serverlessworkflow.io"
 repository = "https://github.com/serverlessworkflow/sdk-rust"
 documentation = "https://github.com/serverlessworkflow/sdk-rust"
 license = "Apache-2.0"
-keywords = ["serverless-workflow", "serverless", "workflow", "dsl", "sdk", "builders", "services"]
+keywords = ["serverless-workflow", "sdk", "builders"]
 categories = ["dsl", "sdk", "builders", "services"]
 
 [dependencies]
