@@ -390,6 +390,10 @@ pub struct ListenTaskDefinition{
     #[serde(rename = "listen")]
     pub listen: ListenerDefinition,
 
+    ///Gets/sets the configuration of the iterator, if any, for processing each consumed event
+    #[serde(rename = "foreach")]
+    pub foreach: Option<SubscriptionIteratorDefinition>,
+
     /// Gets/sets the task's common fields
     #[serde(flatten)]
     pub common: TaskDefinitionFields
@@ -405,6 +409,7 @@ impl ListenTaskDefinition {
     pub fn new(listen: ListenerDefinition) -> Self{
         Self { 
             listen,
+            foreach: None,
             common: TaskDefinitionFields::new()
         }
     }
@@ -416,13 +421,18 @@ pub struct ListenerDefinition{
 
     /// Gets/sets the listener's target
     #[serde(rename = "to")]
-    pub to: EventConsumptionStrategyDefinition
+    pub to: EventConsumptionStrategyDefinition,
+
+    /// Gets/sets a string that specifies how events are read during the listen operation
+    #[serde(rename = "read")]
+    pub read: Option<String>
 
 }
 impl ListenerDefinition {
     pub fn new(to: EventConsumptionStrategyDefinition) -> Self{
         Self{
-            to
+            to,
+            read: None
         }
     }
 }
@@ -912,6 +922,40 @@ impl WaitTaskDefinition {
             duration,
             common: TaskDefinitionFields::new()
         }
+    }
+
+}
+
+/// Represents the definition of the iterator used to process each event or message consumed by a subscription
+#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SubscriptionIteratorDefinition{
+
+    /// Gets the name of the variable used to store the current item being enumerated
+    #[serde(rename = "item")]
+    pub item: Option<String>,
+
+    /// Gets the name of the variable used to store the index of the current item being enumerated
+    #[serde(rename = "at")]
+    pub at: Option<String>,
+
+    /// Gets the tasks to perform for each consumed item
+    #[serde(rename = "do")]
+    pub do_: Option<Map<String, TaskDefinition>>,
+
+    /// Gets/sets an object, if any, used to customize the item's output and to document its schema.
+    #[serde(rename = "output", skip_serializing_if = "Option::is_none")]
+    pub output: Option<OutputDataModelDefinition>,
+
+    /// Gets/sets an object, if any, used to customize the content of the workflow context.
+    #[serde(rename = "export", skip_serializing_if = "Option::is_none")]
+    pub export: Option<OutputDataModelDefinition>
+
+}
+impl SubscriptionIteratorDefinition{
+
+    /// Initializes a new SubscriptionIteratorDefinition
+    pub fn new() -> Self{
+        SubscriptionIteratorDefinition::default()
     }
 
 }
