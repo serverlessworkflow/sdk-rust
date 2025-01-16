@@ -7,7 +7,10 @@ use serverless_workflow_core::models::map::*;
 use serverless_workflow_core::models::resource::*;
 use serverless_workflow_core::models::retry::*;
 use serverless_workflow_core::models::task::*;
+use serverless_workflow_core::models::timeout::OneOfTimeoutDefinitionOrReference;
 use std::collections::HashMap;
+
+use super::timeout::TimeoutDefinitionBuilder;
 
 /// Represents the service used to build TaskDefinitions
 pub struct GenericTaskDefinitionBuilder{
@@ -211,6 +214,27 @@ pub enum TaskDefinitionBuilder{
     Wait(WaitTaskDefinitionBuilder)
 }
 
+/// Defines functionnality common to all TaskDefinitionBuilder implementations
+pub trait TaskDefinitionBuilderBase {
+    
+    /// Configures the task to build to run only if the specified condition matches
+    fn if_(&mut self, condition: &str) -> &mut Self;
+
+    /// Sets the task's timeout
+    fn with_timeout_reference(&mut self, reference: &str) -> &mut Self;
+
+    /// Sets the task's timeout
+    fn with_timeout<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut TimeoutDefinitionBuilder);
+
+    /// Configures the task to build to then execute the specified flow directive
+    fn then(&mut self, directive: &str) -> &mut Self;
+
+    /// Builds the configured TaskDefinition
+    fn build(self) -> TaskDefinition;
+
+}
+
 /// Represents the service used to build CallTaskDefinitions
 pub struct CalltaskDefinitionBuilder{
     task: CallTaskDefinition
@@ -238,9 +262,40 @@ impl CalltaskDefinitionBuilder {
         self.task.with = Some(arguments);
         self
     }
+  
+}
+impl TaskDefinitionBuilderBase for CalltaskDefinitionBuilder{
+
+    /// Configures the task to build to run only if the specified condition matches
+    fn if_(&mut self, condition: &str) -> &mut Self{
+        self.task.common.if_ = Some(condition.to_string());
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout_reference(&mut self, reference: &str) -> &mut Self{
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Reference(reference.to_string()));
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut TimeoutDefinitionBuilder){
+        let mut builder = TimeoutDefinitionBuilder::new();
+        setup(&mut builder);
+        let timeout = builder.build();
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Timeout(timeout));
+        self
+    }
+
+    /// Configures the task to build to then execute the specified flow directive
+    fn then(&mut self, directive: &str) -> &mut Self{
+        self.task.common.then = Some(directive.to_string());
+        self
+    }
 
     /// Builds the configures CallTaskDefinition
-    pub fn build(self) -> TaskDefinition{
+    fn build(self) -> TaskDefinition{
         TaskDefinition::Call(self.task)
     }
 
@@ -266,9 +321,40 @@ impl DoTaskDefinitionBuilder {
         self.task.do_.add(name.to_string(), task);
         self
     }
-    
+
+}
+impl TaskDefinitionBuilderBase for DoTaskDefinitionBuilder{
+
+    /// Configures the task to build to run only if the specified condition matches
+    fn if_(&mut self, condition: &str) -> &mut Self{
+        self.task.common.if_ = Some(condition.to_string());
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout_reference(&mut self, reference: &str) -> &mut Self{
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Reference(reference.to_string()));
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut TimeoutDefinitionBuilder){
+        let mut builder = TimeoutDefinitionBuilder::new();
+        setup(&mut builder);
+        let timeout = builder.build();
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Timeout(timeout));
+        self
+    }
+
+    /// Configures the task to build to then execute the specified flow directive
+    fn then(&mut self, directive: &str) -> &mut Self{
+        self.task.common.then = Some(directive.to_string());
+        self
+    }
+
     /// Builds the configures DoTaskDefinition
-    pub fn build(self) -> TaskDefinition{
+    fn build(self) -> TaskDefinition{
         TaskDefinition::Do(self.task)
     }
 
@@ -285,8 +371,39 @@ impl EmitTaskDefinitionBuilder {
         Self { task: EmitTaskDefinition::new(EventEmissionDefinition::new(event)) }
     }
 
+}
+impl TaskDefinitionBuilderBase for EmitTaskDefinitionBuilder{
+
+    /// Configures the task to build to run only if the specified condition matches
+    fn if_(&mut self, condition: &str) -> &mut Self{
+        self.task.common.if_ = Some(condition.to_string());
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout_reference(&mut self, reference: &str) -> &mut Self{
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Reference(reference.to_string()));
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut TimeoutDefinitionBuilder){
+        let mut builder = TimeoutDefinitionBuilder::new();
+        setup(&mut builder);
+        let timeout = builder.build();
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Timeout(timeout));
+        self
+    }
+
+    /// Configures the task to build to then execute the specified flow directive
+    fn then(&mut self, directive: &str) -> &mut Self{
+        self.task.common.then = Some(directive.to_string());
+        self
+    }
+
     /// Builds the configures DoTaskDefinition
-    pub fn build(self) -> TaskDefinition{
+    fn build(self) -> TaskDefinition{
         TaskDefinition::Emit(self.task)
     }
 
@@ -331,8 +448,39 @@ impl ForTaskDefinitionBuilder{
         self
     }
      
+}
+impl TaskDefinitionBuilderBase for ForTaskDefinitionBuilder{
+
+    /// Configures the task to build to run only if the specified condition matches
+    fn if_(&mut self, condition: &str) -> &mut Self{
+        self.task.common.if_ = Some(condition.to_string());
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout_reference(&mut self, reference: &str) -> &mut Self{
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Reference(reference.to_string()));
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut TimeoutDefinitionBuilder){
+        let mut builder = TimeoutDefinitionBuilder::new();
+        setup(&mut builder);
+        let timeout = builder.build();
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Timeout(timeout));
+        self
+    }
+
+    /// Configures the task to build to then execute the specified flow directive
+    fn then(&mut self, directive: &str) -> &mut Self{
+        self.task.common.then = Some(directive.to_string());
+        self
+    }
+
     /// Builds the configured ForTaskDefinition
-    pub fn build(self) -> TaskDefinition{
+    fn build(self) -> TaskDefinition{
         TaskDefinition::For(self.task)
     }
 
@@ -359,8 +507,39 @@ impl ForkTaskDefinitionBuilder{
         self
     }
 
+}
+impl TaskDefinitionBuilderBase for ForkTaskDefinitionBuilder{
+
+    /// Configures the task to build to run only if the specified condition matches
+    fn if_(&mut self, condition: &str) -> &mut Self{
+        self.task.common.if_ = Some(condition.to_string());
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout_reference(&mut self, reference: &str) -> &mut Self{
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Reference(reference.to_string()));
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut TimeoutDefinitionBuilder){
+        let mut builder = TimeoutDefinitionBuilder::new();
+        setup(&mut builder);
+        let timeout = builder.build();
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Timeout(timeout));
+        self
+    }
+
+    /// Configures the task to build to then execute the specified flow directive
+    fn then(&mut self, directive: &str) -> &mut Self{
+        self.task.common.then = Some(directive.to_string());
+        self
+    }
+
     /// Builds the configured ForkTaskDefinition
-    pub fn build(self) -> TaskDefinition{
+    fn build(self) -> TaskDefinition{
         TaskDefinition::Fork(self.task)
     }
 
@@ -387,8 +566,39 @@ impl ListenTaskDefinitionBuilder{
         self
     }
 
+}
+impl TaskDefinitionBuilderBase for ListenTaskDefinitionBuilder{
+
+    /// Configures the task to build to run only if the specified condition matches
+    fn if_(&mut self, condition: &str) -> &mut Self{
+        self.task.common.if_ = Some(condition.to_string());
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout_reference(&mut self, reference: &str) -> &mut Self{
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Reference(reference.to_string()));
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut TimeoutDefinitionBuilder){
+        let mut builder = TimeoutDefinitionBuilder::new();
+        setup(&mut builder);
+        let timeout = builder.build();
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Timeout(timeout));
+        self
+    }
+
+    /// Configures the task to build to then execute the specified flow directive
+    fn then(&mut self, directive: &str) -> &mut Self{
+        self.task.common.then = Some(directive.to_string());
+        self
+    }
+
     /// Builds the configured ListenTaskDefinition
-    pub fn build(self) -> TaskDefinition{
+    fn build(self) -> TaskDefinition{
         TaskDefinition::Listen(self.task)
     }
 
@@ -396,6 +606,7 @@ impl ListenTaskDefinitionBuilder{
 
 /// Represents the service used to build RaiseTaskDefinitions
 pub struct RaiseTaskDefinitionBuilder{
+    common: TaskDefinitionFields,
     builder: Option<ErrorDefinitionBuilder>,
     reference: Option<String>
 }
@@ -403,7 +614,7 @@ impl RaiseTaskDefinitionBuilder{
 
     /// Initializes a new RaiseTaskDefinitionBuilder
     pub fn new() -> Self{
-        Self { builder: None, reference: None }
+        Self { common: TaskDefinitionFields::new(), builder: None, reference: None }
     }
 
     /// Sets the error to raise
@@ -423,8 +634,39 @@ impl RaiseTaskDefinitionBuilder{
         self.reference = Some(reference.to_string());
     }
 
+}
+impl TaskDefinitionBuilderBase for RaiseTaskDefinitionBuilder{
+
+    /// Configures the task to build to run only if the specified condition matches
+    fn if_(&mut self, condition: &str) -> &mut Self{
+        self.common.if_ = Some(condition.to_string());
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout_reference(&mut self, reference: &str) -> &mut Self{
+        self.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Reference(reference.to_string()));
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut TimeoutDefinitionBuilder){
+        let mut builder = TimeoutDefinitionBuilder::new();
+        setup(&mut builder);
+        let timeout = builder.build();
+        self.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Timeout(timeout));
+        self
+    }
+
+    /// Configures the task to build to then execute the specified flow directive
+    fn then(&mut self, directive: &str) -> &mut Self{
+        self.common.then = Some(directive.to_string());
+        self
+    }
+
     /// Builds the configured RaiseTaskDefinition
-    pub fn build(self) -> TaskDefinition{
+    fn build(self) -> TaskDefinition{
         let mut task = RaiseTaskDefinition::default();
         if let Some(builder) = self.builder {
             let error = builder.build();
@@ -436,6 +678,7 @@ impl RaiseTaskDefinitionBuilder{
         else{
             panic!("The error to raise must be configured");
         }
+        task.common = self.common;
         TaskDefinition::Raise(task)
     }
 
@@ -443,13 +686,14 @@ impl RaiseTaskDefinitionBuilder{
 
 /// Represents the service used to build RunTaskDefinitions
 pub struct RunTaskDefinitionBuilder{
+    common: TaskDefinitionFields,
     builder : Option<ProcessDefinitionBuilder>
 }
 impl RunTaskDefinitionBuilder{
 
     /// Initializes a new RunTaskDefinitionBuilder
     pub fn new() -> Self{
-        Self{ builder: None }
+        Self{ common: TaskDefinitionFields::new(), builder: None }
     }
 
     /// Configures the task to run the specified container
@@ -496,15 +740,47 @@ impl RunTaskDefinitionBuilder{
         }
     }
 
+}
+impl TaskDefinitionBuilderBase for RunTaskDefinitionBuilder{
+
+    /// Configures the task to build to run only if the specified condition matches
+    fn if_(&mut self, condition: &str) -> &mut Self{
+        self.common.if_ = Some(condition.to_string());
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout_reference(&mut self, reference: &str) -> &mut Self{
+        self.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Reference(reference.to_string()));
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut TimeoutDefinitionBuilder){
+        let mut builder = TimeoutDefinitionBuilder::new();
+        setup(&mut builder);
+        let timeout = builder.build();
+        self.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Timeout(timeout));
+        self
+    }
+
+    /// Configures the task to build to then execute the specified flow directive
+    fn then(&mut self, directive: &str) -> &mut Self{
+        self.common.then = Some(directive.to_string());
+        self
+    }
+
     /// Builds the configured RunTaskDefinition
-    pub fn build(self) -> TaskDefinition{
+    fn build(self) -> TaskDefinition{
         if let Some(builder) = self.builder {
-            let process = match builder {
+            let mut process = match builder {
                 ProcessDefinitionBuilder::Container(builder) => builder.build(),
                 ProcessDefinitionBuilder::Script(builder) => builder.build(),
                 ProcessDefinitionBuilder::Shell(builder) => builder.build(),
                 ProcessDefinitionBuilder::Workflow(builder) => builder.build()
             };
+            process.common = self.common;
             TaskDefinition::Run(process)
         }
         else{
@@ -537,11 +813,42 @@ impl SetTaskDefinitionBuilder{
         self
     }
 
-    /// Builds a new SetTaskDefinition
-    pub fn build(self) -> TaskDefinition{
-        TaskDefinition::Set(self.task)
+}
+impl TaskDefinitionBuilderBase for SetTaskDefinitionBuilder{
+
+    /// Configures the task to build to run only if the specified condition matches
+    fn if_(&mut self, condition: &str) -> &mut Self{
+        self.task.common.if_ = Some(condition.to_string());
+        self
     }
 
+    /// Sets the task's timeout
+    fn with_timeout_reference(&mut self, reference: &str) -> &mut Self{
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Reference(reference.to_string()));
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut TimeoutDefinitionBuilder){
+        let mut builder = TimeoutDefinitionBuilder::new();
+        setup(&mut builder);
+        let timeout = builder.build();
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Timeout(timeout));
+        self
+    }
+
+    /// Configures the task to build to then execute the specified flow directive
+    fn then(&mut self, directive: &str) -> &mut Self{
+        self.task.common.then = Some(directive.to_string());
+        self
+    }
+
+    /// Builds a new SetTaskDefinition
+    fn build(self) -> TaskDefinition{
+        TaskDefinition::Set(self.task)
+    }
+    
 }
 
 /// Represents the service used to build SwitchTaskDefinitions
@@ -565,8 +872,39 @@ impl SwitchTaskDefinitionBuilder{
         self
     }
 
+}
+impl TaskDefinitionBuilderBase for SwitchTaskDefinitionBuilder{
+
+    /// Configures the task to build to run only if the specified condition matches
+    fn if_(&mut self, condition: &str) -> &mut Self{
+        self.task.common.if_ = Some(condition.to_string());
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout_reference(&mut self, reference: &str) -> &mut Self{
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Reference(reference.to_string()));
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut TimeoutDefinitionBuilder){
+        let mut builder = TimeoutDefinitionBuilder::new();
+        setup(&mut builder);
+        let timeout = builder.build();
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Timeout(timeout));
+        self
+    }
+
+    /// Configures the task to build to then execute the specified flow directive
+    fn then(&mut self, directive: &str) -> &mut Self{
+        self.task.common.then = Some(directive.to_string());
+        self
+    }
+
     /// Builds a new SwitchTaskDefinition
-    pub fn build(self) -> TaskDefinition{
+    fn build(self) -> TaskDefinition{
         TaskDefinition::Switch(self.task)
     }
 
@@ -601,8 +939,39 @@ impl TryTaskDefinitionBuilder{
         self
     }
 
+}
+impl TaskDefinitionBuilderBase for TryTaskDefinitionBuilder{
+
+    /// Configures the task to build to run only if the specified condition matches
+    fn if_(&mut self, condition: &str) -> &mut Self{
+        self.task.common.if_ = Some(condition.to_string());
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout_reference(&mut self, reference: &str) -> &mut Self{
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Reference(reference.to_string()));
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut TimeoutDefinitionBuilder){
+        let mut builder = TimeoutDefinitionBuilder::new();
+        setup(&mut builder);
+        let timeout = builder.build();
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Timeout(timeout));
+        self
+    }
+
+    /// Configures the task to build to then execute the specified flow directive
+    fn then(&mut self, directive: &str) -> &mut Self{
+        self.task.common.then = Some(directive.to_string());
+        self
+    }
+
     /// Builds a new TryTaskDefinition
-    pub fn build(self) -> TaskDefinition{
+    fn build(self) -> TaskDefinition{
         TaskDefinition::Try(self.task)
     }
 
@@ -618,9 +987,40 @@ impl WaitTaskDefinitionBuilder {
     pub fn new(duration: OneOfDurationOrIso8601Expression) -> Self{
         Self { task: WaitTaskDefinition::new(duration) }
     }
+
+}
+impl TaskDefinitionBuilderBase for WaitTaskDefinitionBuilder{
+
+    /// Configures the task to build to run only if the specified condition matches
+    fn if_(&mut self, condition: &str) -> &mut Self{
+        self.task.common.if_ = Some(condition.to_string());
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout_reference(&mut self, reference: &str) -> &mut Self{
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Reference(reference.to_string()));
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut TimeoutDefinitionBuilder){
+        let mut builder = TimeoutDefinitionBuilder::new();
+        setup(&mut builder);
+        let timeout = builder.build();
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Timeout(timeout));
+        self
+    }
+
+    /// Configures the task to build to then execute the specified flow directive
+    fn then(&mut self, directive: &str) -> &mut Self{
+        self.task.common.then = Some(directive.to_string());
+        self
+    }
     
     /// Builds the configures DoTaskDefinition
-    pub fn build(self) -> TaskDefinition{
+    fn build(self) -> TaskDefinition{
         TaskDefinition::Wait(self.task)
     }
 
