@@ -1,12 +1,17 @@
 use crate::services::authentication::*;
+use crate::services::timeout::*;
 use serverless_workflow_core::models::any::*;
 use serverless_workflow_core::models::duration::*;
 use serverless_workflow_core::models::error::*;
 use serverless_workflow_core::models::event::*;
+use serverless_workflow_core::models::input::*;
 use serverless_workflow_core::models::map::*;
+use serverless_workflow_core::models::output::*;
 use serverless_workflow_core::models::resource::*;
 use serverless_workflow_core::models::retry::*;
+use serverless_workflow_core::models::schema::*;
 use serverless_workflow_core::models::task::*;
+use serverless_workflow_core::models::timeout::*;
 use std::collections::HashMap;
 
 /// Represents the service used to build TaskDefinitions
@@ -211,6 +216,39 @@ pub enum TaskDefinitionBuilder{
     Wait(WaitTaskDefinitionBuilder)
 }
 
+/// Defines functionnality common to all TaskDefinitionBuilder implementations
+pub trait TaskDefinitionBuilderBase {
+    
+    /// Configures the task to build to run only if the specified condition matches
+    fn if_(&mut self, condition: &str) -> &mut Self;
+
+    /// Sets the task's timeout
+    fn with_timeout_reference(&mut self, reference: &str) -> &mut Self;
+
+    /// Sets the task's timeout
+    fn with_timeout<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut TimeoutDefinitionBuilder);
+
+    /// Configures the task's input
+    fn with_input<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut InputDataModelDefinitionBuilder);
+
+    /// Configures the task's output
+    fn with_output<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut OutputDataModelDefinitionBuilder);
+
+    /// Configures the task's export
+    fn with_export<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut OutputDataModelDefinitionBuilder);
+
+    /// Configures the task to build to then execute the specified flow directive
+    fn then(&mut self, directive: &str) -> &mut Self;
+
+    /// Builds the configured TaskDefinition
+    fn build(self) -> TaskDefinition;
+
+}
+
 /// Represents the service used to build CallTaskDefinitions
 pub struct CalltaskDefinitionBuilder{
     task: CallTaskDefinition
@@ -238,9 +276,67 @@ impl CalltaskDefinitionBuilder {
         self.task.with = Some(arguments);
         self
     }
+  
+}
+impl TaskDefinitionBuilderBase for CalltaskDefinitionBuilder{
+
+    /// Configures the task to build to run only if the specified condition matches
+    fn if_(&mut self, condition: &str) -> &mut Self{
+        self.task.common.if_ = Some(condition.to_string());
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout_reference(&mut self, reference: &str) -> &mut Self{
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Reference(reference.to_string()));
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut TimeoutDefinitionBuilder){
+        let mut builder = TimeoutDefinitionBuilder::new();
+        setup(&mut builder);
+        let timeout = builder.build();
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Timeout(timeout));
+        self
+    }
+
+    /// Configures the task's input
+    fn with_input<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut InputDataModelDefinitionBuilder){
+        let mut builder = InputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.common.input = Some(builder.build());
+        self
+    }
+
+    /// Configures the task's output
+    fn with_output<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut OutputDataModelDefinitionBuilder){
+        let mut builder = OutputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.common.output = Some(builder.build());
+        self
+    }
+
+    /// Configures the task's export
+    fn with_export<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut OutputDataModelDefinitionBuilder){
+        let mut builder = OutputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.common.export = Some(builder.build());
+        self
+    }
+
+    /// Configures the task to build to then execute the specified flow directive
+    fn then(&mut self, directive: &str) -> &mut Self{
+        self.task.common.then = Some(directive.to_string());
+        self
+    }
 
     /// Builds the configures CallTaskDefinition
-    pub fn build(self) -> TaskDefinition{
+    fn build(self) -> TaskDefinition{
         TaskDefinition::Call(self.task)
     }
 
@@ -266,9 +362,67 @@ impl DoTaskDefinitionBuilder {
         self.task.do_.add(name.to_string(), task);
         self
     }
+
+}
+impl TaskDefinitionBuilderBase for DoTaskDefinitionBuilder{
+
+    /// Configures the task to build to run only if the specified condition matches
+    fn if_(&mut self, condition: &str) -> &mut Self{
+        self.task.common.if_ = Some(condition.to_string());
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout_reference(&mut self, reference: &str) -> &mut Self{
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Reference(reference.to_string()));
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut TimeoutDefinitionBuilder){
+        let mut builder = TimeoutDefinitionBuilder::new();
+        setup(&mut builder);
+        let timeout = builder.build();
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Timeout(timeout));
+        self
+    }
+
+    /// Configures the task's input
+    fn with_input<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut InputDataModelDefinitionBuilder){
+        let mut builder = InputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.common.input = Some(builder.build());
+        self
+    }
+
+    /// Configures the task's output
+    fn with_output<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut OutputDataModelDefinitionBuilder){
+        let mut builder = OutputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.common.output = Some(builder.build());
+        self
+    }
+
+    /// Configures the task's export
+    fn with_export<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut OutputDataModelDefinitionBuilder){
+        let mut builder = OutputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.common.export = Some(builder.build());
+        self
+    }
     
+    /// Configures the task to build to then execute the specified flow directive
+    fn then(&mut self, directive: &str) -> &mut Self{
+        self.task.common.then = Some(directive.to_string());
+        self
+    }
+
     /// Builds the configures DoTaskDefinition
-    pub fn build(self) -> TaskDefinition{
+    fn build(self) -> TaskDefinition{
         TaskDefinition::Do(self.task)
     }
 
@@ -285,8 +439,66 @@ impl EmitTaskDefinitionBuilder {
         Self { task: EmitTaskDefinition::new(EventEmissionDefinition::new(event)) }
     }
 
+}
+impl TaskDefinitionBuilderBase for EmitTaskDefinitionBuilder{
+
+    /// Configures the task to build to run only if the specified condition matches
+    fn if_(&mut self, condition: &str) -> &mut Self{
+        self.task.common.if_ = Some(condition.to_string());
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout_reference(&mut self, reference: &str) -> &mut Self{
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Reference(reference.to_string()));
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut TimeoutDefinitionBuilder){
+        let mut builder = TimeoutDefinitionBuilder::new();
+        setup(&mut builder);
+        let timeout = builder.build();
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Timeout(timeout));
+        self
+    }
+
+    /// Configures the task's input
+    fn with_input<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut InputDataModelDefinitionBuilder){
+        let mut builder = InputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.common.input = Some(builder.build());
+        self
+    }
+
+    /// Configures the task's output
+    fn with_output<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut OutputDataModelDefinitionBuilder){
+        let mut builder = OutputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.common.output = Some(builder.build());
+        self
+    }
+
+    /// Configures the task's export
+    fn with_export<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut OutputDataModelDefinitionBuilder){
+        let mut builder = OutputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.common.export = Some(builder.build());
+        self
+    }
+
+    /// Configures the task to build to then execute the specified flow directive
+    fn then(&mut self, directive: &str) -> &mut Self{
+        self.task.common.then = Some(directive.to_string());
+        self
+    }
+
     /// Builds the configures DoTaskDefinition
-    pub fn build(self) -> TaskDefinition{
+    fn build(self) -> TaskDefinition{
         TaskDefinition::Emit(self.task)
     }
 
@@ -331,8 +543,66 @@ impl ForTaskDefinitionBuilder{
         self
     }
      
+}
+impl TaskDefinitionBuilderBase for ForTaskDefinitionBuilder{
+
+    /// Configures the task to build to run only if the specified condition matches
+    fn if_(&mut self, condition: &str) -> &mut Self{
+        self.task.common.if_ = Some(condition.to_string());
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout_reference(&mut self, reference: &str) -> &mut Self{
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Reference(reference.to_string()));
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut TimeoutDefinitionBuilder){
+        let mut builder = TimeoutDefinitionBuilder::new();
+        setup(&mut builder);
+        let timeout = builder.build();
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Timeout(timeout));
+        self
+    }
+
+    /// Configures the task's input
+    fn with_input<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut InputDataModelDefinitionBuilder){
+        let mut builder = InputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.common.input = Some(builder.build());
+        self
+    }
+
+    /// Configures the task's output
+    fn with_output<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut OutputDataModelDefinitionBuilder){
+        let mut builder = OutputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.common.output = Some(builder.build());
+        self
+    }
+
+    /// Configures the task's export
+    fn with_export<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut OutputDataModelDefinitionBuilder){
+        let mut builder = OutputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.common.export = Some(builder.build());
+        self
+    }
+
+    /// Configures the task to build to then execute the specified flow directive
+    fn then(&mut self, directive: &str) -> &mut Self{
+        self.task.common.then = Some(directive.to_string());
+        self
+    }
+
     /// Builds the configured ForTaskDefinition
-    pub fn build(self) -> TaskDefinition{
+    fn build(self) -> TaskDefinition{
         TaskDefinition::For(self.task)
     }
 
@@ -359,8 +629,66 @@ impl ForkTaskDefinitionBuilder{
         self
     }
 
+}
+impl TaskDefinitionBuilderBase for ForkTaskDefinitionBuilder{
+
+    /// Configures the task to build to run only if the specified condition matches
+    fn if_(&mut self, condition: &str) -> &mut Self{
+        self.task.common.if_ = Some(condition.to_string());
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout_reference(&mut self, reference: &str) -> &mut Self{
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Reference(reference.to_string()));
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut TimeoutDefinitionBuilder){
+        let mut builder = TimeoutDefinitionBuilder::new();
+        setup(&mut builder);
+        let timeout = builder.build();
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Timeout(timeout));
+        self
+    }
+
+    /// Configures the task's input
+    fn with_input<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut InputDataModelDefinitionBuilder){
+        let mut builder = InputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.common.input = Some(builder.build());
+        self
+    }
+
+    /// Configures the task's output
+    fn with_output<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut OutputDataModelDefinitionBuilder){
+        let mut builder = OutputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.common.output = Some(builder.build());
+        self
+    }
+
+    /// Configures the task's export
+    fn with_export<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut OutputDataModelDefinitionBuilder){
+        let mut builder = OutputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.common.export = Some(builder.build());
+        self
+    }
+
+    /// Configures the task to build to then execute the specified flow directive
+    fn then(&mut self, directive: &str) -> &mut Self{
+        self.task.common.then = Some(directive.to_string());
+        self
+    }
+
     /// Builds the configured ForkTaskDefinition
-    pub fn build(self) -> TaskDefinition{
+    fn build(self) -> TaskDefinition{
         TaskDefinition::Fork(self.task)
     }
 
@@ -387,8 +715,75 @@ impl ListenTaskDefinitionBuilder{
         self
     }
 
+    /// Configures the iterator used to process the consumed events
+    pub fn foreach<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut SubscriptionIteratorDefinitionBuilder){
+        let mut builder = SubscriptionIteratorDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.foreach = Some(builder.build());
+        self
+    }
+
+}
+impl TaskDefinitionBuilderBase for ListenTaskDefinitionBuilder{
+
+    /// Configures the task to build to run only if the specified condition matches
+    fn if_(&mut self, condition: &str) -> &mut Self{
+        self.task.common.if_ = Some(condition.to_string());
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout_reference(&mut self, reference: &str) -> &mut Self{
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Reference(reference.to_string()));
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut TimeoutDefinitionBuilder){
+        let mut builder = TimeoutDefinitionBuilder::new();
+        setup(&mut builder);
+        let timeout = builder.build();
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Timeout(timeout));
+        self
+    }
+
+    /// Configures the task's input
+    fn with_input<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut InputDataModelDefinitionBuilder){
+        let mut builder = InputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.common.input = Some(builder.build());
+        self
+    }
+
+    /// Configures the task's output
+    fn with_output<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut OutputDataModelDefinitionBuilder){
+        let mut builder = OutputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.common.output = Some(builder.build());
+        self
+    }
+
+    /// Configures the task's export
+    fn with_export<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut OutputDataModelDefinitionBuilder){
+        let mut builder = OutputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.common.export = Some(builder.build());
+        self
+    }
+
+    /// Configures the task to build to then execute the specified flow directive
+    fn then(&mut self, directive: &str) -> &mut Self{
+        self.task.common.then = Some(directive.to_string());
+        self
+    }
+
     /// Builds the configured ListenTaskDefinition
-    pub fn build(self) -> TaskDefinition{
+    fn build(self) -> TaskDefinition{
         TaskDefinition::Listen(self.task)
     }
 
@@ -396,6 +791,7 @@ impl ListenTaskDefinitionBuilder{
 
 /// Represents the service used to build RaiseTaskDefinitions
 pub struct RaiseTaskDefinitionBuilder{
+    common: TaskDefinitionFields,
     builder: Option<ErrorDefinitionBuilder>,
     reference: Option<String>
 }
@@ -403,7 +799,7 @@ impl RaiseTaskDefinitionBuilder{
 
     /// Initializes a new RaiseTaskDefinitionBuilder
     pub fn new() -> Self{
-        Self { builder: None, reference: None }
+        Self { common: TaskDefinitionFields::new(), builder: None, reference: None }
     }
 
     /// Sets the error to raise
@@ -423,8 +819,66 @@ impl RaiseTaskDefinitionBuilder{
         self.reference = Some(reference.to_string());
     }
 
+}
+impl TaskDefinitionBuilderBase for RaiseTaskDefinitionBuilder{
+
+    /// Configures the task to build to run only if the specified condition matches
+    fn if_(&mut self, condition: &str) -> &mut Self{
+        self.common.if_ = Some(condition.to_string());
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout_reference(&mut self, reference: &str) -> &mut Self{
+        self.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Reference(reference.to_string()));
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut TimeoutDefinitionBuilder){
+        let mut builder = TimeoutDefinitionBuilder::new();
+        setup(&mut builder);
+        let timeout = builder.build();
+        self.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Timeout(timeout));
+        self
+    }
+
+    /// Configures the task's input
+    fn with_input<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut InputDataModelDefinitionBuilder){
+        let mut builder = InputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.common.input = Some(builder.build());
+        self
+    }
+
+    /// Configures the task's output
+    fn with_output<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut OutputDataModelDefinitionBuilder){
+        let mut builder = OutputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.common.output = Some(builder.build());
+        self
+    }
+
+    /// Configures the task's export
+    fn with_export<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut OutputDataModelDefinitionBuilder){
+        let mut builder = OutputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.common.export = Some(builder.build());
+        self
+    }
+
+    /// Configures the task to build to then execute the specified flow directive
+    fn then(&mut self, directive: &str) -> &mut Self{
+        self.common.then = Some(directive.to_string());
+        self
+    }
+
     /// Builds the configured RaiseTaskDefinition
-    pub fn build(self) -> TaskDefinition{
+    fn build(self) -> TaskDefinition{
         let mut task = RaiseTaskDefinition::default();
         if let Some(builder) = self.builder {
             let error = builder.build();
@@ -436,6 +890,7 @@ impl RaiseTaskDefinitionBuilder{
         else{
             panic!("The error to raise must be configured");
         }
+        task.common = self.common;
         TaskDefinition::Raise(task)
     }
 
@@ -443,13 +898,14 @@ impl RaiseTaskDefinitionBuilder{
 
 /// Represents the service used to build RunTaskDefinitions
 pub struct RunTaskDefinitionBuilder{
+    common: TaskDefinitionFields,
     builder : Option<ProcessDefinitionBuilder>
 }
 impl RunTaskDefinitionBuilder{
 
     /// Initializes a new RunTaskDefinitionBuilder
     pub fn new() -> Self{
-        Self{ builder: None }
+        Self{ common: TaskDefinitionFields::new(), builder: None }
     }
 
     /// Configures the task to run the specified container
@@ -496,15 +952,74 @@ impl RunTaskDefinitionBuilder{
         }
     }
 
+}
+impl TaskDefinitionBuilderBase for RunTaskDefinitionBuilder{
+
+    /// Configures the task to build to run only if the specified condition matches
+    fn if_(&mut self, condition: &str) -> &mut Self{
+        self.common.if_ = Some(condition.to_string());
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout_reference(&mut self, reference: &str) -> &mut Self{
+        self.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Reference(reference.to_string()));
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut TimeoutDefinitionBuilder){
+        let mut builder = TimeoutDefinitionBuilder::new();
+        setup(&mut builder);
+        let timeout = builder.build();
+        self.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Timeout(timeout));
+        self
+    }
+
+    /// Configures the task's input
+    fn with_input<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut InputDataModelDefinitionBuilder){
+        let mut builder = InputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.common.input = Some(builder.build());
+        self
+    }
+
+    /// Configures the task's output
+    fn with_output<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut OutputDataModelDefinitionBuilder){
+        let mut builder = OutputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.common.output = Some(builder.build());
+        self
+    }
+
+    /// Configures the task's export
+    fn with_export<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut OutputDataModelDefinitionBuilder){
+        let mut builder = OutputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.common.export = Some(builder.build());
+        self
+    }
+
+    /// Configures the task to build to then execute the specified flow directive
+    fn then(&mut self, directive: &str) -> &mut Self{
+        self.common.then = Some(directive.to_string());
+        self
+    }
+
     /// Builds the configured RunTaskDefinition
-    pub fn build(self) -> TaskDefinition{
+    fn build(self) -> TaskDefinition{
         if let Some(builder) = self.builder {
-            let process = match builder {
+            let mut process = match builder {
                 ProcessDefinitionBuilder::Container(builder) => builder.build(),
                 ProcessDefinitionBuilder::Script(builder) => builder.build(),
                 ProcessDefinitionBuilder::Shell(builder) => builder.build(),
                 ProcessDefinitionBuilder::Workflow(builder) => builder.build()
             };
+            process.common = self.common;
             TaskDefinition::Run(process)
         }
         else{
@@ -537,11 +1052,69 @@ impl SetTaskDefinitionBuilder{
         self
     }
 
-    /// Builds a new SetTaskDefinition
-    pub fn build(self) -> TaskDefinition{
-        TaskDefinition::Set(self.task)
+}
+impl TaskDefinitionBuilderBase for SetTaskDefinitionBuilder{
+
+    /// Configures the task to build to run only if the specified condition matches
+    fn if_(&mut self, condition: &str) -> &mut Self{
+        self.task.common.if_ = Some(condition.to_string());
+        self
     }
 
+    /// Sets the task's timeout
+    fn with_timeout_reference(&mut self, reference: &str) -> &mut Self{
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Reference(reference.to_string()));
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut TimeoutDefinitionBuilder){
+        let mut builder = TimeoutDefinitionBuilder::new();
+        setup(&mut builder);
+        let timeout = builder.build();
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Timeout(timeout));
+        self
+    }
+
+    /// Configures the task's input
+    fn with_input<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut InputDataModelDefinitionBuilder){
+        let mut builder = InputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.common.input = Some(builder.build());
+        self
+    }
+
+    /// Configures the task's output
+    fn with_output<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut OutputDataModelDefinitionBuilder){
+        let mut builder = OutputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.common.output = Some(builder.build());
+        self
+    }
+
+    /// Configures the task's export
+    fn with_export<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut OutputDataModelDefinitionBuilder){
+        let mut builder = OutputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.common.export = Some(builder.build());
+        self
+    }
+
+    /// Configures the task to build to then execute the specified flow directive
+    fn then(&mut self, directive: &str) -> &mut Self{
+        self.task.common.then = Some(directive.to_string());
+        self
+    }
+
+    /// Builds a new SetTaskDefinition
+    fn build(self) -> TaskDefinition{
+        TaskDefinition::Set(self.task)
+    }
+    
 }
 
 /// Represents the service used to build SwitchTaskDefinitions
@@ -565,8 +1138,66 @@ impl SwitchTaskDefinitionBuilder{
         self
     }
 
+}
+impl TaskDefinitionBuilderBase for SwitchTaskDefinitionBuilder{
+
+    /// Configures the task to build to run only if the specified condition matches
+    fn if_(&mut self, condition: &str) -> &mut Self{
+        self.task.common.if_ = Some(condition.to_string());
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout_reference(&mut self, reference: &str) -> &mut Self{
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Reference(reference.to_string()));
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut TimeoutDefinitionBuilder){
+        let mut builder = TimeoutDefinitionBuilder::new();
+        setup(&mut builder);
+        let timeout = builder.build();
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Timeout(timeout));
+        self
+    }
+
+    /// Configures the task's input
+    fn with_input<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut InputDataModelDefinitionBuilder){
+        let mut builder = InputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.common.input = Some(builder.build());
+        self
+    }
+
+    /// Configures the task's output
+    fn with_output<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut OutputDataModelDefinitionBuilder){
+        let mut builder = OutputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.common.output = Some(builder.build());
+        self
+    }
+
+    /// Configures the task's export
+    fn with_export<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut OutputDataModelDefinitionBuilder){
+        let mut builder = OutputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.common.export = Some(builder.build());
+        self
+    }
+
+    /// Configures the task to build to then execute the specified flow directive
+    fn then(&mut self, directive: &str) -> &mut Self{
+        self.task.common.then = Some(directive.to_string());
+        self
+    }
+
     /// Builds a new SwitchTaskDefinition
-    pub fn build(self) -> TaskDefinition{
+    fn build(self) -> TaskDefinition{
         TaskDefinition::Switch(self.task)
     }
 
@@ -601,8 +1232,66 @@ impl TryTaskDefinitionBuilder{
         self
     }
 
+}
+impl TaskDefinitionBuilderBase for TryTaskDefinitionBuilder{
+
+    /// Configures the task to build to run only if the specified condition matches
+    fn if_(&mut self, condition: &str) -> &mut Self{
+        self.task.common.if_ = Some(condition.to_string());
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout_reference(&mut self, reference: &str) -> &mut Self{
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Reference(reference.to_string()));
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut TimeoutDefinitionBuilder){
+        let mut builder = TimeoutDefinitionBuilder::new();
+        setup(&mut builder);
+        let timeout = builder.build();
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Timeout(timeout));
+        self
+    }
+
+    /// Configures the task's input
+    fn with_input<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut InputDataModelDefinitionBuilder){
+        let mut builder = InputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.common.input = Some(builder.build());
+        self
+    }
+
+    /// Configures the task's output
+    fn with_output<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut OutputDataModelDefinitionBuilder){
+        let mut builder = OutputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.common.output = Some(builder.build());
+        self
+    }
+
+    /// Configures the task's export
+    fn with_export<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut OutputDataModelDefinitionBuilder){
+        let mut builder = OutputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.common.export = Some(builder.build());
+        self
+    }
+
+    /// Configures the task to build to then execute the specified flow directive
+    fn then(&mut self, directive: &str) -> &mut Self{
+        self.task.common.then = Some(directive.to_string());
+        self
+    }
+
     /// Builds a new TryTaskDefinition
-    pub fn build(self) -> TaskDefinition{
+    fn build(self) -> TaskDefinition{
         TaskDefinition::Try(self.task)
     }
 
@@ -618,9 +1307,67 @@ impl WaitTaskDefinitionBuilder {
     pub fn new(duration: OneOfDurationOrIso8601Expression) -> Self{
         Self { task: WaitTaskDefinition::new(duration) }
     }
+
+}
+impl TaskDefinitionBuilderBase for WaitTaskDefinitionBuilder{
+
+    /// Configures the task to build to run only if the specified condition matches
+    fn if_(&mut self, condition: &str) -> &mut Self{
+        self.task.common.if_ = Some(condition.to_string());
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout_reference(&mut self, reference: &str) -> &mut Self{
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Reference(reference.to_string()));
+        self
+    }
+
+    /// Sets the task's timeout
+    fn with_timeout<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut TimeoutDefinitionBuilder){
+        let mut builder = TimeoutDefinitionBuilder::new();
+        setup(&mut builder);
+        let timeout = builder.build();
+        self.task.common.timeout = Some(OneOfTimeoutDefinitionOrReference::Timeout(timeout));
+        self
+    }
+
+    /// Configures the task's input
+    fn with_input<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut InputDataModelDefinitionBuilder){
+        let mut builder = InputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.common.input = Some(builder.build());
+        self
+    }
+
+    /// Configures the task's output
+    fn with_output<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut OutputDataModelDefinitionBuilder){
+        let mut builder = OutputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.common.output = Some(builder.build());
+        self
+    }
+
+    /// Configures the task's export
+    fn with_export<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut OutputDataModelDefinitionBuilder){
+        let mut builder = OutputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.task.common.export = Some(builder.build());
+        self
+    }
+
+    /// Configures the task to build to then execute the specified flow directive
+    fn then(&mut self, directive: &str) -> &mut Self{
+        self.task.common.then = Some(directive.to_string());
+        self
+    }
     
     /// Builds the configures DoTaskDefinition
-    pub fn build(self) -> TaskDefinition{
+    fn build(self) -> TaskDefinition{
         TaskDefinition::Wait(self.task)
     }
 
@@ -833,6 +1580,63 @@ impl EventFilterDefinitionBuilder{
     /// Builds the configured EventFilterDefinition
     pub fn build(self) -> EventFilterDefinition{
         self.filter
+    }
+
+}
+
+/// Represents the service used to build SubscriptionIteratorDefinitions
+pub struct SubscriptionIteratorDefinitionBuilder{
+    iterator: SubscriptionIteratorDefinition
+}
+impl SubscriptionIteratorDefinitionBuilder{
+
+    /// Initializes a new SubscriptionIteratorDefinitionBuilder
+    pub fn new() -> Self{
+        Self { iterator: SubscriptionIteratorDefinition::new() }
+    }
+
+    /// Sets the name of the variable used to store the item being enumerated
+    pub fn with_item(&mut self, variable: &str) -> &mut Self{
+        self.iterator.item = Some(variable.to_string());
+        self
+    }
+
+    /// Sets the name of the variable used to store the index of the item being enumerated
+    pub fn at(&mut self, variable: &str) -> &mut Self{
+        self.iterator.at = Some(variable.to_string());
+        self
+    }
+
+    /// Configures the tasks to run for each consumd event/message
+    pub fn do_<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut TaskDefinitionMapBuilder){
+        let mut builder = TaskDefinitionMapBuilder::new();
+        setup(& mut builder);
+        self.iterator.do_ = Some(builder.build());
+        self
+    }
+
+    /// Configures the data each iteration outputs
+    pub fn with_output<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut OutputDataModelDefinitionBuilder){
+        let mut builder = OutputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.iterator.output = Some(builder.build());
+        self
+    }
+
+    /// Configures the data exported with each iteration
+    pub fn with_export<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut OutputDataModelDefinitionBuilder){
+        let mut builder = OutputDataModelDefinitionBuilder::new();
+        setup(&mut builder);
+        self.iterator.export = Some(builder.build());
+        self
+    }
+
+    /// Buils the configures SubscriptionIteratorDefinition
+    pub fn build(self) -> SubscriptionIteratorDefinition{
+        self.iterator
     }
 
 }
@@ -1657,5 +2461,101 @@ impl JitterDefinitionBuilder{
     pub fn build(self) -> JitterDefinition{
         self.jitter
     } 
+
+}
+
+/// Represents the service used to build InputDataModelDefinitions
+pub struct InputDataModelDefinitionBuilder{
+    input : InputDataModelDefinition
+}
+impl InputDataModelDefinitionBuilder{
+
+    /// Initializes a new InputDataModelDefinitionBuilder
+    pub fn new() -> Self{
+        Self{ input: InputDataModelDefinition::default() }
+    }
+
+    /// Configures the input schema
+    pub fn with_schema<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut SchemaDefinitionBuilder){
+        let mut builder = SchemaDefinitionBuilder::new();
+        setup(&mut builder);
+        self.input.schema = Some(builder.build());
+        self
+    }
+
+    /// Configures the expression used to filter the input
+    pub fn from(&mut self, expression: AnyValue) -> &mut Self{
+        self.input.from = Some(expression);
+        self
+    }
+
+    /// Builds the configured InputDataModelDefinition
+    pub fn build(self) -> InputDataModelDefinition{
+        self.input
+    }
+
+}
+
+/// Represents the service used to build OutputDataModelDefinitions
+pub struct OutputDataModelDefinitionBuilder{
+    output : OutputDataModelDefinition
+}
+impl OutputDataModelDefinitionBuilder{
+
+    /// Initializes a new OutputDataModelDefinitionBuilder
+    pub fn new() -> Self{
+        Self{ output: OutputDataModelDefinition::default() }
+    }
+
+    /// Sets a runtime expression, if any, used to output specific data to the scope data
+    pub fn as_(&mut self, expression: AnyValue) -> &mut Self{
+        self.output.as_ = Some(expression);
+        self
+    }
+
+    /// Builds the configured OutputDataModelDefinition
+    pub fn build(self) -> OutputDataModelDefinition{
+        self.output
+    }
+
+}
+
+/// Represents the service used to build SchemaDefinitions
+pub struct SchemaDefinitionBuilder{
+    schema: SchemaDefinition
+}
+impl SchemaDefinitionBuilder{
+
+    /// Initializes a new SchemaDefinitionBuilder
+    pub fn new() -> Self{
+        Self { schema: SchemaDefinition::default() }
+    }
+
+    /// Sets the schema format
+    pub fn with_format(&mut self, format: &str) -> &mut Self{
+        self.schema.format = format.to_string();
+        self
+    }
+
+    /// Sets the schema resource
+    pub fn with_resource<F>(&mut self, setup: F) -> &mut Self
+    where F: FnOnce(&mut ExternalResourceDefinitionBuilder){
+        let mut builder = ExternalResourceDefinitionBuilder::new();
+        setup(&mut builder);
+        self.schema.resource = Some(builder.build());
+        self
+    }
+
+    /// Sets the schema document
+    pub fn with_document(&mut self, document: AnyValue) -> &mut Self{
+        self.schema.document = Some(document);
+        self
+    }
+
+    /// Builds the configured SchemaDefinition
+    pub fn build(self) -> SchemaDefinition{
+        self.schema
+    }
 
 }

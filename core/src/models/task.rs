@@ -9,6 +9,9 @@ use crate::models::input::*;
 use crate::models::resource::*;
 use crate::models::retry::*;
 
+use super::output::OutputDataModelDefinition;
+use super::timeout::OneOfTimeoutDefinitionOrReference;
+
 /// Enumerates all supported task types
 pub struct TaskType;
 impl TaskType {
@@ -82,9 +85,64 @@ pub enum TaskDefinition{
 }
 
 /// A trait that all task definitions must implement
-pub trait TypedTaskDefinition {
+pub trait TaskDefinitionBase {
     /// Gets the task's type
     fn task_type(&self) -> &str;
+}
+
+/// Holds the fields common to all tasks
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TaskDefinitionFields{
+
+    /// Gets/sets a runtime expression, if any, used to determine whether or not the execute the task in the current context
+    #[serde(rename = "if", skip_serializing_if = "Option::is_none")]
+    pub if_: Option<String>,
+
+    /// Gets/sets the definition, if any, of the task's input data
+    #[serde(rename = "input", skip_serializing_if = "Option::is_none")]
+    pub input: Option<InputDataModelDefinition>,
+
+    /// Gets/sets the definition, if any, of the task's output data
+    #[serde(rename = "output", skip_serializing_if = "Option::is_none")]
+    pub output: Option<OutputDataModelDefinition>,
+
+    /// Gets/sets the optional configuration for exporting data within the task's context
+    #[serde(rename = "export", skip_serializing_if = "Option::is_none")]
+    pub export: Option<OutputDataModelDefinition>,
+
+    /// Gets/sets the task's timeout, if any
+    #[serde(rename = "timeout", skip_serializing_if = "Option::is_none")]
+    pub timeout: Option<OneOfTimeoutDefinitionOrReference>,
+
+    /// Gets/sets the flow directive to be performed upon completion of the task
+    #[serde(rename = "then", skip_serializing_if = "Option::is_none")]
+    pub then: Option<String>,
+
+    /// Gets/sets a key/value mapping of additional information associated with the task
+    #[serde(rename = "metadata", skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<HashMap<String, AnyValue>>
+
+}
+impl Default for TaskDefinitionFields{
+    fn default() -> Self {
+        TaskDefinitionFields::new()
+    }
+}
+impl TaskDefinitionFields{
+
+    /// Initializes a new TaskDefinitionFields
+    pub fn new() -> Self{
+        Self { 
+            if_: None, 
+            input: None, 
+            output: None, 
+            export: None, 
+            timeout: None, 
+            then: None, 
+            metadata: None 
+        }
+    }
+
 }
 
 /// Represents the definition of a task used to call a predefined function
@@ -101,22 +159,30 @@ pub struct CallTaskDefinition{
 
     /// Gets/sets a boolean indicating whether or not to wait for the called function to return. Defaults to true
     #[serde(rename = "await", skip_serializing_if = "Option::is_none")]
-    pub await_: Option<bool>
+    pub await_: Option<bool>,
+
+    /// Gets/sets the task's common fields
+    #[serde(flatten)]
+    pub common: TaskDefinitionFields
 
 }
-impl TypedTaskDefinition for CallTaskDefinition {
+impl TaskDefinitionBase for CallTaskDefinition {
     fn task_type(&self) -> &str {
         TaskType::CALL
     }
 }
 impl  CallTaskDefinition {
+    
+    /// Initializes a new CalltaskDefinition
     pub fn new(call: &str, with: Option<HashMap<String, AnyValue>>, await_: Option<bool>) -> Self{
         Self { 
             call: call.to_string(), 
             with, 
-            await_
+            await_,
+            common: TaskDefinitionFields::new()
         }
     }
+
 }
 
 /// Represents the configuration of a task that is composed of multiple subtasks to run sequentially
@@ -125,20 +191,28 @@ pub struct DoTaskDefinition{
 
     /// Gets/sets a name/definition mapping of the subtasks to perform sequentially
     #[serde(rename = "do")]
-    pub do_: Map<String, TaskDefinition>
+    pub do_: Map<String, TaskDefinition>,
+
+    /// Gets/sets the task's common fields
+    #[serde(flatten)]
+    pub common: TaskDefinitionFields
 
 }
-impl TypedTaskDefinition for DoTaskDefinition {
+impl TaskDefinitionBase for DoTaskDefinition {
     fn task_type(&self) -> &str {
         TaskType::DO
     }
 }
 impl DoTaskDefinition {
+    
+    /// Initializes a new CalltaskDefinition
     pub fn new(do_: Map<String, TaskDefinition>) -> Self{
         Self { 
-            do_
+            do_,
+            common: TaskDefinitionFields::new()
         }
     }
+
 }
 
 /// Represents the configuration of a task used to emit an event
@@ -147,18 +221,24 @@ pub struct EmitTaskDefinition{
 
     /// Gets/sets the configuration of an event's emission
     #[serde(rename = "emit")]
-    pub emit: EventEmissionDefinition
+    pub emit: EventEmissionDefinition,
+
+    /// Gets/sets the task's common fields
+    #[serde(flatten)]
+    pub common: TaskDefinitionFields,
 
 }
-impl TypedTaskDefinition for EmitTaskDefinition {
+impl TaskDefinitionBase for EmitTaskDefinition {
     fn task_type(&self) -> &str {
         TaskType::EMIT
     }
 }
 impl EmitTaskDefinition {
+    /// Initializes a new EmitTaskDefinition
     pub fn new(emit: EventEmissionDefinition) -> Self{
         Self { 
-            emit 
+            emit,
+            common: TaskDefinitionFields::new()
         }
     }
 }
@@ -196,20 +276,26 @@ pub struct ForTaskDefinition{
 
     /// Gets/sets the tasks to perform for each item in the collection
     #[serde(rename = "do")]
-    pub do_: Map<String, TaskDefinition>
+    pub do_: Map<String, TaskDefinition>,
+
+    /// Gets/sets the task's common fields
+    #[serde(flatten)]
+    pub common: TaskDefinitionFields
 
 }
-impl TypedTaskDefinition for ForTaskDefinition {
+impl TaskDefinitionBase for ForTaskDefinition {
     fn task_type(&self) -> &str {
         TaskType::FOR
     }
 }
 impl ForTaskDefinition {
+    /// Initializes a new ForTaskDefinition
     pub fn new(for_: ForLoopDefinition, do_: Map<String, TaskDefinition>, while_: Option<String>) -> Self{
         Self { 
             for_, 
             while_, 
-            do_
+            do_,
+            common: TaskDefinitionFields::new()
         }
     }
 }
@@ -252,18 +338,24 @@ pub struct ForkTaskDefinition{
 
     /// Gets/sets the configuration of the branches to perform concurrently
     #[serde(rename = "fork")]
-    pub fork: BranchingDefinition
+    pub fork: BranchingDefinition,
+
+    /// Gets/sets the task's common fields
+    #[serde(flatten)]
+    pub common: TaskDefinitionFields
 
 }
-impl TypedTaskDefinition for ForkTaskDefinition {
+impl TaskDefinitionBase for ForkTaskDefinition {
     fn task_type(&self) -> &str {
         TaskType::FORK
     }
 }
 impl ForkTaskDefinition {
+    /// Initializes a new ForkTaskDefinition
     pub fn new(fork: BranchingDefinition) -> Self{
         Self { 
-            fork
+            fork,
+            common: TaskDefinitionFields::new()
          }
     }
 }
@@ -296,18 +388,29 @@ pub struct ListenTaskDefinition{
 
     /// Gets/sets the configuration of the listener to use
     #[serde(rename = "listen")]
-    pub listen: ListenerDefinition
+    pub listen: ListenerDefinition,
+
+    ///Gets/sets the configuration of the iterator, if any, for processing each consumed event
+    #[serde(rename = "foreach")]
+    pub foreach: Option<SubscriptionIteratorDefinition>,
+
+    /// Gets/sets the task's common fields
+    #[serde(flatten)]
+    pub common: TaskDefinitionFields
 
 }
-impl TypedTaskDefinition for ListenTaskDefinition {
+impl TaskDefinitionBase for ListenTaskDefinition {
     fn task_type(&self) -> &str {
         TaskType::LISTEN
     }
 }
 impl ListenTaskDefinition {
+    /// Initializes a new ListenTaskDefinition
     pub fn new(listen: ListenerDefinition) -> Self{
         Self { 
-            listen
+            listen,
+            foreach: None,
+            common: TaskDefinitionFields::new()
         }
     }
 }
@@ -318,13 +421,18 @@ pub struct ListenerDefinition{
 
     /// Gets/sets the listener's target
     #[serde(rename = "to")]
-    pub to: EventConsumptionStrategyDefinition
+    pub to: EventConsumptionStrategyDefinition,
+
+    /// Gets/sets a string that specifies how events are read during the listen operation
+    #[serde(rename = "read")]
+    pub read: Option<String>
 
 }
 impl ListenerDefinition {
     pub fn new(to: EventConsumptionStrategyDefinition) -> Self{
         Self{
-            to
+            to,
+            read: None
         }
     }
 }
@@ -335,18 +443,24 @@ pub struct RaiseTaskDefinition{
 
     /// Gets/sets the definition of the error to raise
     #[serde(rename = "raise")]
-    pub raise: RaiseErrorDefinition
+    pub raise: RaiseErrorDefinition,
+
+    /// Gets/sets the task's common fields
+    #[serde(flatten)]
+    pub common: TaskDefinitionFields
 
 }
-impl TypedTaskDefinition for RaiseTaskDefinition {
+impl TaskDefinitionBase for RaiseTaskDefinition {
     fn task_type(&self) -> &str {
         TaskType::RAISE
     }
 }
 impl RaiseTaskDefinition {
+    /// Initializes a new RaiseTaskDefinition
     pub fn new(raise: RaiseErrorDefinition) -> Self{
         Self{
-            raise
+            raise,
+            common: TaskDefinitionFields::new()
         }
     }
 }
@@ -375,18 +489,24 @@ pub struct RunTaskDefinition{
 
     /// Gets/sets the configuration of the process to execute
     #[serde(rename = "run")]
-    pub run: ProcessTypeDefinition
+    pub run: ProcessTypeDefinition,
+
+    /// Gets/sets the task's common fields
+    #[serde(flatten)]
+    pub common: TaskDefinitionFields
 
 }
-impl TypedTaskDefinition for RunTaskDefinition {
+impl TaskDefinitionBase for RunTaskDefinition {
     fn task_type(&self) -> &str {
         TaskType::RUN
     }
 }
 impl RunTaskDefinition {
+    /// Initializes a new RunTaskDefinition
     pub fn new(run: ProcessTypeDefinition) -> Self{
         Self { 
-            run
+            run,
+            common: TaskDefinitionFields::new()
         }
     }
 }
@@ -637,18 +757,24 @@ pub struct SetTaskDefinition{
 
     /// Gets/sets the data to set
     #[serde(rename = "set")]
-    pub set: HashMap<String, AnyValue>
+    pub set: HashMap<String, AnyValue>,
+
+    /// Gets/sets the task's common fields
+    #[serde(flatten)]
+    pub common: TaskDefinitionFields
 
 }
-impl TypedTaskDefinition for SetTaskDefinition {
+impl TaskDefinitionBase for SetTaskDefinition {
     fn task_type(&self) -> &str {
         TaskType::SET
     }
 }
 impl SetTaskDefinition {
+    /// Initializes a new SetTaskDefinition
     pub fn new() -> Self{
         Self { 
-            set: HashMap::new()
+            set: HashMap::new(),
+            common: TaskDefinitionFields::new()
         }
     }
 }
@@ -659,18 +785,24 @@ pub struct SwitchTaskDefinition{
 
     /// Gets/sets the definition of the switch to use
     #[serde(rename = "switch")]
-    pub switch: Map<String, SwitchCaseDefinition>
+    pub switch: Map<String, SwitchCaseDefinition>,
+
+    /// Gets/sets the task's common fields
+    #[serde(flatten)]
+    pub common: TaskDefinitionFields
 
 }
-impl TypedTaskDefinition for SwitchTaskDefinition {
+impl TaskDefinitionBase for SwitchTaskDefinition {
     fn task_type(&self) -> &str {
         TaskType::SWITCH
     }
 }
 impl SwitchTaskDefinition {
+    /// Initializes a new SwitchTaskDefinition
     pub fn new() -> Self{
         Self { 
-            switch: Map::new()
+            switch: Map::new(),
+            common: TaskDefinitionFields::new()
         }
     }
 }
@@ -699,21 +831,29 @@ pub struct TryTaskDefinition{
 
     /// Gets/sets the object used to define the errors to catch
     #[serde(rename = "catch")]
-    pub catch: ErrorCatcherDefinition
+    pub catch: ErrorCatcherDefinition,
+
+    /// Gets/sets the task's common fields
+    #[serde(flatten)]
+    pub common: TaskDefinitionFields
 
 }
-impl TypedTaskDefinition for TryTaskDefinition {
+impl TaskDefinitionBase for TryTaskDefinition {
     fn task_type(&self) -> &str {
         TaskType::TRY
     }
 }
 impl TryTaskDefinition {
+    
+    /// Initializes a new TryTaskDefintion
     pub fn new(try_: Map<String, TaskDefinition>, catch: ErrorCatcherDefinition) -> Self{
         Self { 
             try_,
-            catch
+            catch,
+            common: TaskDefinitionFields::new()
         }
     }
+
 }
 
 /// Represents the configuration of a concept used to catch errors
@@ -762,18 +902,60 @@ pub struct WaitTaskDefinition{
 
     /// Gets/sets the amount of time to wait before resuming workflow
     #[serde(rename = "duration")]
-    pub duration: OneOfDurationOrIso8601Expression
+    pub duration: OneOfDurationOrIso8601Expression,
+
+    /// Gets/sets the task's common fields
+    #[serde(flatten)]
+    pub common: TaskDefinitionFields
 
 }
-impl TypedTaskDefinition for WaitTaskDefinition {
+impl TaskDefinitionBase for WaitTaskDefinition {
     fn task_type(&self) -> &str {
         TaskType::WAIT
     }
 }
 impl WaitTaskDefinition {
+    
+    /// Initializes a new WaitTaskDefinition
     pub fn new(duration: OneOfDurationOrIso8601Expression) -> Self{
         Self { 
-            duration
+            duration,
+            common: TaskDefinitionFields::new()
         }
     }
+
+}
+
+/// Represents the definition of the iterator used to process each event or message consumed by a subscription
+#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SubscriptionIteratorDefinition{
+
+    /// Gets the name of the variable used to store the current item being enumerated
+    #[serde(rename = "item")]
+    pub item: Option<String>,
+
+    /// Gets the name of the variable used to store the index of the current item being enumerated
+    #[serde(rename = "at")]
+    pub at: Option<String>,
+
+    /// Gets the tasks to perform for each consumed item
+    #[serde(rename = "do")]
+    pub do_: Option<Map<String, TaskDefinition>>,
+
+    /// Gets/sets an object, if any, used to customize the item's output and to document its schema.
+    #[serde(rename = "output", skip_serializing_if = "Option::is_none")]
+    pub output: Option<OutputDataModelDefinition>,
+
+    /// Gets/sets an object, if any, used to customize the content of the workflow context.
+    #[serde(rename = "export", skip_serializing_if = "Option::is_none")]
+    pub export: Option<OutputDataModelDefinition>
+
+}
+impl SubscriptionIteratorDefinition{
+
+    /// Initializes a new SubscriptionIteratorDefinition
+    pub fn new() -> Self{
+        SubscriptionIteratorDefinition::default()
+    }
+
 }
