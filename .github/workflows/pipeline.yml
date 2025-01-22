@@ -45,7 +45,7 @@ jobs:
           ${{ runner.os }}-cargo-build-
 
     - name: Build the project
-      run: cargo build --workspace --all-targets
+      run: cargo build --workspace --all-targets --features "serde/derive"
 
     - name: Run tests
       run: cargo test --workspace --all-targets
