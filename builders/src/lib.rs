@@ -3,7 +3,7 @@ pub mod services;
 #[cfg(test)]
 mod unit_tests {
 
-    use serverless_workflow_core::models::any::*;
+    use serde_json::Value;
     use serverless_workflow_core::models::duration::*;
     use serverless_workflow_core::models::error::OneOfErrorDefinitionOrReference;
     use crate::services::workflow::WorkflowBuilder;
@@ -33,16 +33,16 @@ mod unit_tests {
         let password = "fake-password";
         let call_task_name = "call-task";
         let call_function_name = "fake-function";
-        let call_task_with: HashMap<String, AnyValue> = vec![
-            ("key1".to_string(), AnyValue::String("value1".to_string())),
-            ("key2".to_string(), AnyValue::String("value2".to_string()))]
+        let call_task_with: HashMap<String, Value> = vec![
+            ("key1".to_string(), Value::String("value1".to_string())),
+            ("key2".to_string(), Value::String("value2".to_string()))]
             .into_iter()
             .collect(); 
         let do_task_name = "do-task"; 
         let emit_task_name = "emit-task";
-        let emit_event_attributes: HashMap<String, AnyValue> = vec![
-            ("key1".to_string(), AnyValue::String("value1".to_string())),
-            ("key2".to_string(), AnyValue::String("value2".to_string()))]
+        let emit_event_attributes: HashMap<String, Value> = vec![
+            ("key1".to_string(), Value::String("value1".to_string())),
+            ("key2".to_string(), Value::String("value2".to_string()))]
             .into_iter()
             .collect();
         let for_task_name = "for-task";
@@ -53,7 +53,7 @@ mod unit_tests {
         let listen_task_name = "listen-task";
         let raise_task_name = "raise-task-name";
         let raise_error_type = "error-type";
-        let raise_error_status = AnyValue::Int16(400);
+        let raise_error_status = json!(400);
         let raise_error_title = "error-title";
         let raise_error_detail = "error-detail";
         let raise_error_instance = "error-instance";
@@ -82,11 +82,11 @@ mod unit_tests {
         let workflow_namespace = "workflow-namespace";
         let workflow_name = "workflow-name";
         let workflow_version = "workflow-version";
-        let workflow_input = AnyValue::Json(json!({"hello": "world"}));
+        let workflow_input = json!({"hello": "world"});
         let set_task_name = "set-task-name";
-        let set_task_variables : HashMap<String, AnyValue> = vec![
-            ("var1-name".to_string(), AnyValue::String("var1-value".to_string())),
-            ("var2-name".to_string(), AnyValue::UInt64(69))]
+        let set_task_variables : HashMap<String, Value> = vec![
+            ("var1-name".to_string(), json!("var1-value".to_string())),
+            ("var2-name".to_string(), json!(69))]
             .into_iter()
             .collect();
         let switch_task_name = "switch-task-name";
@@ -95,9 +95,9 @@ mod unit_tests {
         let switch_case_then = "continue";
         let try_task_name = "try-task-name";
         let catch_when = "catch-when";
-        let catch_errors_attributes: HashMap<String, AnyValue> = vec![
-            ("var1-name".to_string(), AnyValue::String("var1-value".to_string())),
-            ("var2-name".to_string(), AnyValue::UInt64(69))]
+        let catch_errors_attributes: HashMap<String, Value> = vec![
+            ("var1-name".to_string(), json!("var1-value".to_string())),
+            ("var2-name".to_string(), json!(69))]
             .into_iter()
             .collect();
         let retry_except_when = "retry-except-when";
@@ -154,7 +154,7 @@ mod unit_tests {
                 task.listen()
                     .to(|e|{
                         e.one()
-                            .with("key", AnyValue::String("value".to_string()));
+                            .with("key", Value::String("value".to_string()));
                     });
             })
             .do_(raise_task_name, |task| {

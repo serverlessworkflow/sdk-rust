@@ -1,4 +1,3 @@
-pub mod any;
 pub mod authentication;
 pub mod catalog;
 pub mod duration;

@@ -1,5 +1,5 @@
 use serde_derive::{Deserialize, Serialize};
-use crate::models::any::*;
+use serde_json::Value;
 
 /// Represents the definition an error to raise
 #[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
@@ -15,7 +15,7 @@ pub struct ErrorDefinition{
 
     /// Gets/sets the status code produced by the described error
     #[serde(rename = "status")]
-    pub status: AnyValue,
+    pub status: Value,
 
     /// Gets/sets a human-readable explanation specific to this occurrence of the error.
     #[serde(rename = "detail", skip_serializing_if = "Option::is_none")]
@@ -29,7 +29,7 @@ pub struct ErrorDefinition{
 impl ErrorDefinition{
     
     /// Initializes a new ErrorDefinition
-    pub fn new(type_: &str, title: &str, status: AnyValue, detail: Option<String>, instance: Option<String>) -> Self{
+    pub fn new(type_: &str, title: &str, status: Value, detail: Option<String>, instance: Option<String>) -> Self{
         Self { 
             type_: type_.to_string(), 
             title: title.to_string(),
