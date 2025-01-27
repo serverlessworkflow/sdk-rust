@@ -1,5 +1,5 @@
 use serde_derive::{Deserialize, Serialize};
-use crate::models::any::*;
+use serde_json::Value;
 use crate::models::resource::*;
 
 /// Provvides the default schema format
@@ -32,6 +32,6 @@ pub struct SchemaDefinition{
 
     /// Gets/sets the inline definition of the schema to use. Required if <see cref="Resource"/> has not been set.
     #[serde(rename = "document", skip_serializing_if = "Option::is_none")]
-    pub document : Option<AnyValue>
+    pub document : Option<Value>
 
 }

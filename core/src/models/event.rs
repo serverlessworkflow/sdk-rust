@@ -1,6 +1,6 @@
 use serde_derive::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
-use crate::models::any::*;
 
 /// Represents the configuration of an event consumption strategy
 #[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
@@ -30,7 +30,7 @@ pub struct EventFilterDefinition{
 
     /// Gets/sets a name/value mapping of the attributes filtered events must define. Supports both regular expressions and runtime expressions
     #[serde(rename = "with", skip_serializing_if = "Option::is_none")]
-    pub with : Option<HashMap<String, AnyValue>>,
+    pub with : Option<HashMap<String, Value>>,
 
     /// Gets/sets a name/definition mapping of the correlation to attempt when filtering events.
     #[serde(rename = "correlate", skip_serializing_if = "Option::is_none")]
@@ -66,11 +66,11 @@ pub struct EventDefinition{
 
     /// Gets/sets a key/value mapping of the attributes of the configured event
     #[serde(rename = "with")]
-    pub with: HashMap<String, AnyValue>
+    pub with: HashMap<String, Value>
 
 }
 impl EventDefinition {
-    pub fn new(with: HashMap<String, AnyValue>) -> Self{
+    pub fn new(with: HashMap<String, Value>) -> Self{
         Self{
             with
         }

@@ -1,5 +1,5 @@
 use serde_derive::{Deserialize, Serialize};
-use crate::models::any::*;
+use serde_json::Value;
 use crate::models::schema::*;
 
 /// Represents the definition of an input data model
@@ -12,6 +12,6 @@ pub struct InputDataModelDefinition{
     
     /// Gets/sets a runtime expression, if any, used to build the workflow or task input data based on both input and scope data
     #[serde(rename = "from", skip_serializing_if = "Option::is_none")]
-    pub from : Option<AnyValue>
+    pub from : Option<Value>
 
 }

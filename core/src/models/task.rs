@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use serde_derive::{Deserialize, Serialize};
-use crate::models::any::*;
+use serde_json::Value;
 use crate::models::duration::*;
 use crate::models::event::*;
 use crate::models::error::*;
@@ -120,7 +120,7 @@ pub struct TaskDefinitionFields{
 
     /// Gets/sets a key/value mapping of additional information associated with the task
     #[serde(rename = "metadata", skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<HashMap<String, AnyValue>>
+    pub metadata: Option<HashMap<String, Value>>
 
 }
 impl Default for TaskDefinitionFields{
@@ -155,7 +155,7 @@ pub struct CallTaskDefinition{
 
     /// Gets/sets a key/value mapping of the call's arguments, if any
     #[serde(rename = "with", skip_serializing_if = "Option::is_none")]
-    pub with: Option<HashMap<String, AnyValue>>,
+    pub with: Option<HashMap<String, Value>>,
 
     /// Gets/sets a boolean indicating whether or not to wait for the called function to return. Defaults to true
     #[serde(rename = "await", skip_serializing_if = "Option::is_none")]
@@ -174,7 +174,7 @@ impl TaskDefinitionBase for CallTaskDefinition {
 impl  CallTaskDefinition {
     
     /// Initializes a new CalltaskDefinition
-    pub fn new(call: &str, with: Option<HashMap<String, AnyValue>>, await_: Option<bool>) -> Self{
+    pub fn new(call: &str, with: Option<HashMap<String, Value>>, await_: Option<bool>) -> Self{
         Self { 
             call: call.to_string(), 
             with, 
@@ -737,11 +737,11 @@ pub struct WorkflowProcessDefinition{
 
     /// Gets/sets the data, if any, to pass as input to the workflow to execute. The value should be validated against the target workflow's input schema, if specified
     #[serde(rename = "input", skip_serializing_if = "Option::is_none")]
-    pub input: Option<AnyValue>
+    pub input: Option<Value>
 
 }
 impl WorkflowProcessDefinition {
-    pub fn new(namespace: &str, name: &str, version: &str, input: Option<AnyValue>) -> Self{
+    pub fn new(namespace: &str, name: &str, version: &str, input: Option<Value>) -> Self{
         Self { 
             namespace: namespace.to_string(), 
             name: name.to_string(), 
@@ -757,7 +757,7 @@ pub struct SetTaskDefinition{
 
     /// Gets/sets the data to set
     #[serde(rename = "set")]
-    pub set: HashMap<String, AnyValue>,
+    pub set: HashMap<String, Value>,
 
     /// Gets/sets the task's common fields
     #[serde(flatten)]
@@ -892,7 +892,7 @@ pub struct ErrorFilterDefinition{
 
     /// Gets/sets a key/value mapping of the properties errors to filter must define
     #[serde(rename = "with", skip_serializing_if = "Option::is_none")]
-    pub with: Option<HashMap<String, AnyValue>>
+    pub with: Option<HashMap<String, Value>>
 
 }
 

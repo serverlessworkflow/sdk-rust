@@ -1,6 +1,6 @@
 use crate::services::authentication::*;
 use crate::services::timeout::*;
-use serverless_workflow_core::models::any::*;
+use serde_json::Value;
 use serverless_workflow_core::models::duration::*;
 use serverless_workflow_core::models::error::*;
 use serverless_workflow_core::models::event::*;
@@ -261,7 +261,7 @@ impl CalltaskDefinitionBuilder {
     }
 
     /// Adds a new argument to call the function with
-    pub fn with(&mut self, name: &str, value: AnyValue) -> &mut Self{
+    pub fn with(&mut self, name: &str, value: Value) -> &mut Self{
         if self.task.with.is_none(){
             self.task.with = Some(HashMap::new());
         }
@@ -272,7 +272,7 @@ impl CalltaskDefinitionBuilder {
     }
 
     /// Sets the arguments to call the function with
-    pub fn with_arguments(&mut self, arguments: HashMap<String, AnyValue>) -> &mut Self{
+    pub fn with_arguments(&mut self, arguments: HashMap<String, Value>) -> &mut Self{
         self.task.with = Some(arguments);
         self
     }
@@ -1041,13 +1041,13 @@ impl SetTaskDefinitionBuilder{
     }
 
     /// Sets the specified variable
-    pub fn variable(&mut self, name: &str, value: AnyValue) -> &mut Self{
+    pub fn variable(&mut self, name: &str, value: Value) -> &mut Self{
         self.task.set.insert(name.to_string(), value);
         self
     }
 
     /// Configures the task to set the specified variables
-    pub fn variables(&mut self, variables: HashMap<String, AnyValue>) -> &mut Self{
+    pub fn variables(&mut self, variables: HashMap<String, Value>) -> &mut Self{
         self.task.set = variables;
         self
     }
@@ -1385,13 +1385,13 @@ impl EventDefinitionBuilder{
     }
 
     /// Adds a new attribute to the event
-    pub fn with(&mut self, name: &str, value: AnyValue) -> &mut Self{
+    pub fn with(&mut self, name: &str, value: Value) -> &mut Self{
         self.event.with.insert(name.to_string(), value);
         self
     }
 
     /// Sets the event's attributes
-     pub fn with_attributes(&mut self, attributes: HashMap<String, AnyValue>) -> &mut Self{
+     pub fn with_attributes(&mut self, attributes: HashMap<String, Value>) -> &mut Self{
         self.event.with = attributes;
         self
     }
@@ -1561,7 +1561,7 @@ impl EventFilterDefinitionBuilder{
     }
 
     /// Adds a new attribute to filter events by
-    pub fn with(&mut self, name: &str, value: AnyValue) -> &mut Self{
+    pub fn with(&mut self, name: &str, value: Value) -> &mut Self{
         if self.filter.with.is_none(){
             self.filter.with = Some(HashMap::new());
         }
@@ -1572,7 +1572,7 @@ impl EventFilterDefinitionBuilder{
     }
 
     /// Sets a name/value mapping of the attributes to filter events by
-    pub fn with_attributes(&mut self, attributes: HashMap<String, AnyValue>) -> &mut Self{
+    pub fn with_attributes(&mut self, attributes: HashMap<String, Value>) -> &mut Self{
         self.filter.with = Some(attributes);
         self
     }
@@ -1659,7 +1659,7 @@ impl ErrorDefinitionBuilder{
     }
 
     /// Sets the error's status
-    pub fn with_status(&mut self, status: AnyValue) -> &mut Self{
+    pub fn with_status(&mut self, status: Value) -> &mut Self{
         self.error.status = status;
         self
     }
@@ -1952,7 +1952,7 @@ impl WorkflowProcessDefinitionBuilder{
     }
 
     /// Sets the input of the workflow to run
-    pub fn with_input(&mut self, input: AnyValue) -> &mut Self{
+    pub fn with_input(&mut self, input: Value) -> &mut Self{
         self.process.input = Some(input);
         self
     }
@@ -2151,7 +2151,7 @@ impl ErrroFilterDefinitionBuilder{
     }
 
      /// Adds a new attribute filter
-     pub fn with(&mut self, name: &str, value: AnyValue) -> &mut Self{
+     pub fn with(&mut self, name: &str, value: Value) -> &mut Self{
         if self.filter.with.is_none(){
             self.filter.with = Some(HashMap::new());
         }
@@ -2162,7 +2162,7 @@ impl ErrroFilterDefinitionBuilder{
     }
 
     /// Sets a name/value mapping of the attributes to filter errors by
-    pub fn with_attributes(&mut self, attributes: HashMap<String, AnyValue>) -> &mut Self{
+    pub fn with_attributes(&mut self, attributes: HashMap<String, Value>) -> &mut Self{
         self.filter.with = Some(attributes);
         self
     }
@@ -2485,7 +2485,7 @@ impl InputDataModelDefinitionBuilder{
     }
 
     /// Configures the expression used to filter the input
-    pub fn from(&mut self, expression: AnyValue) -> &mut Self{
+    pub fn from(&mut self, expression: Value) -> &mut Self{
         self.input.from = Some(expression);
         self
     }
@@ -2509,7 +2509,7 @@ impl OutputDataModelDefinitionBuilder{
     }
 
     /// Sets a runtime expression, if any, used to output specific data to the scope data
-    pub fn as_(&mut self, expression: AnyValue) -> &mut Self{
+    pub fn as_(&mut self, expression: Value) -> &mut Self{
         self.output.as_ = Some(expression);
         self
     }
@@ -2548,7 +2548,7 @@ impl SchemaDefinitionBuilder{
     }
 
     /// Sets the schema document
-    pub fn with_document(&mut self, document: AnyValue) -> &mut Self{
+    pub fn with_document(&mut self, document: Value) -> &mut Self{
         self.schema.document = Some(document);
         self
     }

@@ -1,6 +1,6 @@
 [package]
 name = "serverless_workflow_core"
-version = "1.0.0-alpha6.2"
+version = "1.0.0-alpha6.3"
 edition = "2021"
 authors = ["The Serverless Workflow Authors <cncf.serverless.workflow@gmail.com>"]
 description = "Contains Serverless Workflow DSL models"

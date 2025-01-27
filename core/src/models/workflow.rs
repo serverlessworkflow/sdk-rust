@@ -1,6 +1,6 @@
 use serde_derive::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
-use crate::models::any::*;
 use crate::models::authentication::*;
 use crate::models::catalog::*;
 use crate::models::duration::*;
@@ -80,7 +80,7 @@ pub struct WorkflowDefinition{
 
     /// Gets/sets a key/value mapping, if any, of additional information associated with the workflow
     #[serde(rename = "metadata", skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<HashMap<String, AnyValue>>
+    pub metadata: Option<HashMap<String, Value>>
 
 }
 impl WorkflowDefinition {

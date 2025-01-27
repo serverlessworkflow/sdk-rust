@@ -107,7 +107,7 @@ dependencies = [
 
 [[package]]
 name = "serverless_workflow_builders"
-version = "1.0.0-alpha6.2"
+version = "1.0.0-alpha6.3"
 dependencies = [
  "serde_json",
  "serde_yaml",
@@ -116,7 +116,7 @@ dependencies = [
 
 [[package]]
 name = "serverless_workflow_core"
-version = "1.0.0-alpha6.2"
+version = "1.0.0-alpha6.3"
 dependencies = [
  "serde",
  "serde_derive",
