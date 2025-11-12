@@ -55,7 +55,7 @@ impl ProcessType {
 }
 
 /// Represents a value that can be any of the supported task definitions
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum TaskDefinition{
     /// Variant holding the definition of a 'call' task
@@ -82,6 +82,93 @@ pub enum TaskDefinition{
     Try(TryTaskDefinition),
     /// Variant holding the definition of a 'wait' task
     Wait(WaitTaskDefinition)
+}
+
+// Custom deserializer to handle For vs Do ambiguity
+impl<'de> serde::Deserialize<'de> for TaskDefinition {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = Value::deserialize(deserializer)?;
+
+        // Check for 'for' field first - if present, it's a For task
+        if value.get("for").is_some() {
+            return ForTaskDefinition::deserialize(value)
+                .map(TaskDefinition::For)
+                .map_err(serde::de::Error::custom);
+        }
+
+        // Try other variants in priority order
+        if value.get("call").is_some() {
+            return CallTaskDefinition::deserialize(value)
+                .map(TaskDefinition::Call)
+                .map_err(serde::de::Error::custom);
+        }
+
+        if value.get("set").is_some() {
+            return SetTaskDefinition::deserialize(value)
+                .map(TaskDefinition::Set)
+                .map_err(serde::de::Error::custom);
+        }
+
+        if value.get("fork").is_some() {
+            return ForkTaskDefinition::deserialize(value)
+                .map(TaskDefinition::Fork)
+                .map_err(serde::de::Error::custom);
+        }
+
+        if value.get("run").is_some() {
+            return RunTaskDefinition::deserialize(value)
+                .map(TaskDefinition::Run)
+                .map_err(serde::de::Error::custom);
+        }
+
+        if value.get("switch").is_some() {
+            return SwitchTaskDefinition::deserialize(value)
+                .map(TaskDefinition::Switch)
+                .map_err(serde::de::Error::custom);
+        }
+
+        if value.get("try").is_some() {
+            return TryTaskDefinition::deserialize(value)
+                .map(TaskDefinition::Try)
+                .map_err(serde::de::Error::custom);
+        }
+
+        if value.get("emit").is_some() {
+            return EmitTaskDefinition::deserialize(value)
+                .map(TaskDefinition::Emit)
+                .map_err(serde::de::Error::custom);
+        }
+
+        if value.get("raise").is_some() {
+            return RaiseTaskDefinition::deserialize(value)
+                .map(TaskDefinition::Raise)
+                .map_err(serde::de::Error::custom);
+        }
+
+        if value.get("wait").is_some() {
+            return WaitTaskDefinition::deserialize(value)
+                .map(TaskDefinition::Wait)
+                .map_err(serde::de::Error::custom);
+        }
+
+        if value.get("listen").is_some() {
+            return ListenTaskDefinition::deserialize(value)
+                .map(TaskDefinition::Listen)
+                .map_err(serde::de::Error::custom);
+        }
+
+        // If we get here and there's a 'do' field, it's a Do task (not a For task)
+        if value.get("do").is_some() {
+            return DoTaskDefinition::deserialize(value)
+                .map(TaskDefinition::Do)
+                .map_err(serde::de::Error::custom);
+        }
+
+        Err(serde::de::Error::custom("unknown task type"))
+    }
 }
 
 /// A trait that all task definitions must implement
@@ -305,7 +392,7 @@ impl ForTaskDefinition {
 pub struct ForLoopDefinition{
 
     /// Gets/sets the name of the variable that represents each element in the collection during iteration
-    #[serde(rename = "emit")]
+    #[serde(rename = "each")]
     pub each: String,
 
     /// Gets/sets the runtime expression used to get the collection to iterate over
