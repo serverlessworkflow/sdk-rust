@@ -732,7 +732,7 @@ impl ContainerProcessDefinition {
 /// Represents the definition of a script evaluation process
 #[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ScriptProcessDefinition{
-    
+
     /// Gets/sets the language of the script to run
     #[serde(rename = "language")]
     pub language: String,
@@ -745,9 +745,13 @@ pub struct ScriptProcessDefinition{
     #[serde(rename = "source", skip_serializing_if = "Option::is_none")]
     pub source: Option<ExternalResourceDefinition>,
 
-    /// Gets/sets a key/value mapping of the arguments, if any, to pass to the script to run
+    /// Gets/sets the data to pass to the process via stdin
+    #[serde(rename = "stdin", skip_serializing_if = "Option::is_none")]
+    pub stdin: Option<String>,
+
+    /// Gets/sets a list of arguments, if any, to pass to the script (argv)
     #[serde(rename = "arguments", skip_serializing_if = "Option::is_none")]
-    pub arguments: Option<HashMap<String, String>>,
+    pub arguments: Option<Vec<String>>,
 
     /// Gets/sets a key/value mapping of the environment variables, if any, to use when running the configured process
     #[serde(rename = "environment", skip_serializing_if = "Option::is_none")]
@@ -757,23 +761,25 @@ pub struct ScriptProcessDefinition{
 impl ScriptProcessDefinition {
 
     /// Initializes a new script from code
-    pub fn from_code(language: &str, code: String, arguments: Option<HashMap<String, String>>, environment: Option<HashMap<String, String>>) -> Self{
-        Self { 
-            language: language.to_string(), 
-            code: Some(code), 
-            source: None, 
-            arguments, 
+    pub fn from_code(language: &str, code: String, stdin: Option<String>, arguments: Option<Vec<String>>, environment: Option<HashMap<String, String>>) -> Self{
+        Self {
+            language: language.to_string(),
+            code: Some(code),
+            source: None,
+            stdin,
+            arguments,
             environment
          }
     }
 
     /// Initializes a new script from an external resource
-    pub fn from_source(language: &str, source: ExternalResourceDefinition, arguments: Option<HashMap<String, String>>, environment: Option<HashMap<String, String>>) -> Self{
-        Self { 
-            language: language.to_string(), 
-            code: None, 
-            source: Some(source), 
-            arguments, 
+    pub fn from_source(language: &str, source: ExternalResourceDefinition, stdin: Option<String>, arguments: Option<Vec<String>>, environment: Option<HashMap<String, String>>) -> Self{
+        Self {
+            language: language.to_string(),
+            code: None,
+            source: Some(source),
+            stdin,
+            arguments,
             environment
          }
     }
@@ -838,13 +844,29 @@ impl WorkflowProcessDefinition {
     }
 }
 
+/// Represents the value that can be set in a Set task - either a map or a runtime expression string
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum SetValue {
+    /// A map of key-value pairs to set
+    Map(HashMap<String, Value>),
+    /// A runtime expression string that evaluates to the data to set
+    Expression(String),
+}
+
+impl Default for SetValue {
+    fn default() -> Self {
+        SetValue::Map(HashMap::new())
+    }
+}
+
 /// Represents the definition of a task used to set data
 #[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SetTaskDefinition{
 
     /// Gets/sets the data to set
     #[serde(rename = "set")]
-    pub set: HashMap<String, Value>,
+    pub set: SetValue,
 
     /// Gets/sets the task's common fields
     #[serde(flatten)]
@@ -859,8 +881,8 @@ impl TaskDefinitionBase for SetTaskDefinition {
 impl SetTaskDefinition {
     /// Initializes a new SetTaskDefinition
     pub fn new() -> Self{
-        Self { 
-            set: HashMap::new(),
+        Self {
+            set: SetValue::Map(HashMap::new()),
             common: TaskDefinitionFields::new()
         }
     }
@@ -988,8 +1010,8 @@ pub struct ErrorFilterDefinition{
 pub struct WaitTaskDefinition{
 
     /// Gets/sets the amount of time to wait before resuming workflow
-    #[serde(rename = "duration")]
-    pub duration: OneOfDurationOrIso8601Expression,
+    #[serde(rename = "wait")]
+    pub wait: OneOfDurationOrIso8601Expression,
 
     /// Gets/sets the task's common fields
     #[serde(flatten)]
@@ -1002,11 +1024,11 @@ impl TaskDefinitionBase for WaitTaskDefinition {
     }
 }
 impl WaitTaskDefinition {
-    
+
     /// Initializes a new WaitTaskDefinition
-    pub fn new(duration: OneOfDurationOrIso8601Expression) -> Self{
-        Self { 
-            duration,
+    pub fn new(wait: OneOfDurationOrIso8601Expression) -> Self{
+        Self {
+            wait,
             common: TaskDefinitionFields::new()
         }
     }
