@@ -237,4 +237,140 @@ mod unit_tests {
             }
         }
     }
+
+    #[test]
+    fn test_set_value_map_deserialization() {
+        // Test SetValue with a map (object) of key-value pairs
+        let set_value_map = serde_json::json!({
+            "foo": "bar",
+            "count": 42
+        });
+
+        let result: Result<SetTaskDefinition, _> = serde_json::from_value(serde_json::json!({
+            "set": set_value_map
+        }));
+        assert!(result.is_ok(), "Failed to deserialize set task with map: {:?}", result.err());
+
+        let set_task = result.unwrap();
+        match set_task.set {
+            SetValue::Map(map) => {
+                assert_eq!(map.len(), 2);
+                assert_eq!(map.get("foo").and_then(|v| v.as_str()), Some("bar"));
+                assert_eq!(map.get("count").and_then(|v| v.as_u64()), Some(42));
+            }
+            SetValue::Expression(_) => {
+                panic!("Expected SetValue::Map but got SetValue::Expression");
+            }
+        }
+    }
+
+    #[test]
+    fn test_set_value_expression_deserialization() {
+        // Test SetValue with a runtime expression string
+        let set_value_expr_json = serde_json::json!("${ $workflow.input[0] }");
+
+        let result: Result<SetTaskDefinition, _> = serde_json::from_value(serde_json::json!({
+            "set": set_value_expr_json
+        }));
+        assert!(result.is_ok(), "Failed to deserialize set task with expression: {:?}", result.err());
+
+        let set_task = result.unwrap();
+        match set_task.set {
+            SetValue::Expression(expr) => {
+                assert_eq!(expr, "${ $workflow.input[0] }");
+            }
+            SetValue::Map(_) => {
+                panic!("Expected SetValue::Expression but got SetValue::Map");
+            }
+        }
+    }
+
+    #[test]
+    fn test_wait_task_iso8601_deserialization() {
+        // Test WaitTask with ISO 8601 duration string
+        let wait_task_json = serde_json::json!({
+            "wait": "PT30S"
+        });
+        let result: Result<WaitTaskDefinition, _> = serde_json::from_value(wait_task_json);
+        assert!(result.is_ok(), "Failed to deserialize wait task with ISO 8601: {:?}", result.err());
+
+        let wait_task = result.unwrap();
+        match wait_task.wait {
+            OneOfDurationOrIso8601Expression::Iso8601Expression(expr) => {
+                assert_eq!(expr, "PT30S");
+            }
+            OneOfDurationOrIso8601Expression::Duration(_) => {
+                panic!("Expected Iso8601Expression but got Duration");
+            }
+        }
+    }
+
+    #[test]
+    fn test_wait_task_inline_duration_deserialization() {
+        // Test WaitTask with inline duration properties
+        let wait_task_json = serde_json::json!({
+            "wait": {
+                "seconds": 30
+            }
+        });
+        let result: Result<WaitTaskDefinition, _> = serde_json::from_value(wait_task_json);
+        assert!(result.is_ok(), "Failed to deserialize wait task with inline duration: {:?}", result.err());
+
+        let wait_task = result.unwrap();
+        match wait_task.wait {
+            OneOfDurationOrIso8601Expression::Duration(duration) => {
+                assert_eq!(duration.seconds, Some(30));
+            }
+            OneOfDurationOrIso8601Expression::Iso8601Expression(_) => {
+                panic!("Expected Duration but got Iso8601Expression");
+            }
+        }
+    }
+
+    #[test]
+    fn test_script_process_arguments_array_deserialization() {
+        use crate::models::task::ScriptProcessDefinition;
+
+        // Test ScriptProcessDefinition with arguments as an array (spec-compliant)
+        let script_process_json = serde_json::json!({
+            "language": "javascript",
+            "code": "console.log('test')",
+            "arguments": ["hello", "world"]
+        });
+        let result: Result<ScriptProcessDefinition, _> = serde_json::from_value(script_process_json);
+        assert!(result.is_ok(), "Failed to deserialize script with array arguments: {:?}", result.err());
+
+        let script = result.unwrap();
+        assert_eq!(script.language, "javascript");
+        assert!(script.arguments.is_some());
+
+        let args = script.arguments.unwrap();
+        assert_eq!(args.len(), 2);
+        assert_eq!(args[0], "hello");
+        assert_eq!(args[1], "world");
+    }
+
+    #[test]
+    fn test_script_process_with_stdin_deserialization() {
+        use crate::models::task::ScriptProcessDefinition;
+
+        // Test ScriptProcessDefinition with stdin property
+        let script_process_json = serde_json::json!({
+            "language": "python",
+            "code": "print('test')",
+            "stdin": "Hello Workflow",
+            "arguments": ["arg1"],
+            "environment": {"FOO": "bar"}
+        });
+        let result: Result<ScriptProcessDefinition, _> = serde_json::from_value(script_process_json);
+        assert!(result.is_ok(), "Failed to deserialize script with stdin: {:?}", result.err());
+
+        let script = result.unwrap();
+        assert_eq!(script.language, "python");
+        assert_eq!(script.stdin, Some("Hello Workflow".to_string()));
+        assert!(script.arguments.is_some());
+        assert_eq!(script.arguments.as_ref().unwrap().len(), 1);
+        assert!(script.environment.is_some());
+        assert_eq!(script.environment.as_ref().unwrap().get("FOO"), Some(&"bar".to_string()));
+    }
 }

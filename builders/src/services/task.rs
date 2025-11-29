@@ -1042,13 +1042,29 @@ impl SetTaskDefinitionBuilder{
 
     /// Sets the specified variable
     pub fn variable(&mut self, name: &str, value: Value) -> &mut Self{
-        self.task.set.insert(name.to_string(), value);
+        match &mut self.task.set {
+            serverless_workflow_core::models::task::SetValue::Map(map) => {
+                map.insert(name.to_string(), value);
+            }
+            serverless_workflow_core::models::task::SetValue::Expression(_) => {
+                // If it was an expression, convert to map
+                let mut map = HashMap::new();
+                map.insert(name.to_string(), value);
+                self.task.set = serverless_workflow_core::models::task::SetValue::Map(map);
+            }
+        }
+        self
+    }
+
+    /// Configures the variable as an expression
+    pub fn variable_expression(&mut self, expression: String) -> &mut Self{
+        self.task.set = serverless_workflow_core::models::task::SetValue::Expression(expression);
         self
     }
 
     /// Configures the task to set the specified variables
     pub fn variables(&mut self, variables: HashMap<String, Value>) -> &mut Self{
-        self.task.set = variables;
+        self.task.set = serverless_workflow_core::models::task::SetValue::Map(variables);
         self
     }
 
@@ -1820,18 +1836,18 @@ impl ScriptProcessDefinitionBuilder{
     }
 
     /// Adds a new argument to execute the script with
-    pub fn with_argument(&mut self, key: &str, value: &str) -> &mut Self{
+    pub fn with_argument(&mut self, value: &str) -> &mut Self{
         if self.process.arguments.is_none(){
-            self.process.arguments = Some(HashMap::new());
+            self.process.arguments = Some(Vec::new());
         }
         if let Some(arguments) = &mut self.process.arguments {
-            arguments.insert(key.to_string(), value.to_string());
+            arguments.push(value.to_string());
         }
         self
     }
 
     /// Sets the arguments of the script to execute
-    pub fn with_arguments(&mut self, arguments: HashMap<String, String>) -> &mut Self{
+    pub fn with_arguments(&mut self, arguments: Vec<String>) -> &mut Self{
         self.process.arguments = Some(arguments);
         self
     }
@@ -1850,6 +1866,11 @@ impl ScriptProcessDefinitionBuilder{
     /// Sets the process's environment variables
     pub fn with_environment_variables(&mut self, environment: HashMap<String, String>) -> &mut Self{
         self.process.environment = Some(environment);
+        self
+    }
+
+    pub fn with_stdin(&mut self, stdin: &str) -> &mut Self{
+        self.process.stdin = Some(stdin.to_string());
         self
     }
 

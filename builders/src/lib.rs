@@ -434,7 +434,12 @@ mod unit_tests {
                 .iter()
                 .any(|entry| entry.get(&set_task_name.to_string()).map_or(false, |task|{
                     if let TaskDefinition::Set(set_task) = task {
-                        set_task.set == set_task_variables.clone()
+                        match &set_task.set {
+                            serverless_workflow_core::models::task::SetValue::Map(map) => {
+                                map == &set_task_variables
+                            }
+                            _ => false
+                        }
                     }
                     else{
                         false
@@ -482,12 +487,12 @@ mod unit_tests {
                 .iter()
                 .any(|entry| entry.get(&wait_task_name.to_string()).map_or(false, |task| {
                     if let TaskDefinition::Wait(wait_task) = task {
-                        wait_task.duration == wait_duration
+                        wait_task.wait == wait_duration
                     } else {
                         false
                     }
                 })),
-            "Expected a task with key '{}' and a WaitTaskDefinition with 'duration'={}",
+            "Expected a task with key '{}' and a WaitTaskDefinition with 'wait'={}",
             wait_task_name,
             wait_duration);
     }
