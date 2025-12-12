@@ -715,9 +715,11 @@ pub struct ContainerProcessDefinition{
     #[serde(rename = "environment", skip_serializing_if = "Option::is_none")]
     pub environment: Option<HashMap<String, String>>,
 
+    /// Gets/sets the data to pass to the process via stdin, if any
     #[serde(rename = "stdin", skip_serializing_if = "Option::is_none")]
     pub stdin: Option<String>,
 
+    /// Gets/sets a list of arguments, if any, to pass to the container (argv)
     #[serde(rename = "arguments", skip_serializing_if = "Option::is_none")]
     pub arguments: Option<Vec<String>>,
 }

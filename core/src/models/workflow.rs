@@ -205,7 +205,7 @@ pub struct ComponentDefinitionCollection{
     #[serde(rename = "errors", skip_serializing_if = "Option::is_none")]
     pub errors: Option<HashMap<String, ErrorDefinition>>,
 
-    /// Gets/sets a name/value mapping of the workflow's extensions, if any
+    /// Gets/sets a list containing the workflow's extensions, if any
     #[serde(rename = "extensions", skip_serializing_if = "Option::is_none")]
     pub extensions: Option<Vec<HashMap<String, ExtensionDefinition>>>,
 
