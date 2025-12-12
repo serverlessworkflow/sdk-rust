@@ -16,10 +16,9 @@ pub struct ExtensionDefinition{
 
     /// Gets/sets a name/definition map, if any, of the tasks to execute before the extended task
     #[serde(rename = "before", skip_serializing_if = "Option::is_none")]
-    pub before: Option<HashMap<String, TaskDefinition>>,
+    pub before: Option<Vec<HashMap<String, TaskDefinition>>>,
 
     /// Gets/sets a name/definition map, if any, of the tasks to execute after the extended task
     #[serde(rename = "after", skip_serializing_if = "Option::is_none")]
-    pub after: Option<HashMap<String, TaskDefinition>>
-
+    pub after: Option<Vec<HashMap<String, TaskDefinition>>>
 }

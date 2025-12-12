@@ -373,4 +373,74 @@ mod unit_tests {
         assert!(script.environment.is_some());
         assert_eq!(script.environment.as_ref().unwrap().get("FOO"), Some(&"bar".to_string()));
     }
+
+    #[test]
+    fn test_extension_definition_serialization() {
+        let extension_json = json!({
+            "document": {
+                "dsl": "1.0.2",
+                "namespace": "test",
+                "name": "sample-workflow",
+                "version": "0.1.0"
+            },
+            "use": {
+                "extensions": [
+                    {
+                    "mockService": {
+                        "extend": "call",
+                        "when": "($task.with.endpoint != null and ($task.with.endpoint | startswith(\"https://mocked.service.com\"))) or ($task.with.endpoint.uri != null and ($task.with.endpoint.uri | startswith(\"https://mocked.service.com\")))",
+                        "before": [
+                            {
+                                "mockResponse": {
+                                    "set": {
+                                        "statusCode": 200,
+                                        "headers": {
+                                            "Content-Type": "application/json"
+                                        },
+                                        "content": {
+                                            "foo": {
+                                                "bar": "baz"
+                                            }
+                                        }
+                                    },
+                                    "then": "exit"
+                                }
+                            }
+                        ]
+                    }
+                }
+                ]
+            },
+            "do": [
+                {
+                    "callHttp": {
+                        "call": "http",
+                        "with": {
+                            "method": "get",
+                            "endpoint": {
+                                "uri": "https://fake.com/sample"
+                            }
+                        }
+                    }
+                }
+            ]
+        });
+        let result: Result<WorkflowDefinition, _> = serde_json::from_value(extension_json);
+        match result {
+            Ok(workflow) => {
+                // Verify the workflow was deserialized correctly
+                assert_eq!(workflow.document.namespace, "test");
+                assert_eq!(workflow.document.name, "sample-workflow");
+                assert_eq!(workflow.document.version, "0.1.0");
+                // Verify the use section exists with extensions
+                assert!(workflow.use_.is_some());
+                if let Some(use_def) = workflow.use_ {
+                    assert!(use_def.extensions.is_some());
+                }
+            }
+            Err(e) => {
+                panic!("Failed to deserialize workflow with extension: {}", e);
+            }
+        }
+    }
 }

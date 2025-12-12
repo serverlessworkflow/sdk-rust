@@ -715,16 +715,23 @@ pub struct ContainerProcessDefinition{
     #[serde(rename = "environment", skip_serializing_if = "Option::is_none")]
     pub environment: Option<HashMap<String, String>>,
 
+    #[serde(rename = "stdin", skip_serializing_if = "Option::is_none")]
+    pub stdin: Option<String>,
+
+    #[serde(rename = "arguments", skip_serializing_if = "Option::is_none")]
+    pub arguments: Option<Vec<String>>,
 }
 impl ContainerProcessDefinition {
-    pub fn new(image: &str, name: Option<String>, command: Option<String>, ports: Option<HashMap<u16, u16>>, volumes: Option<HashMap<String, String>>, environment: Option<HashMap<String, String>>) -> Self{
+    pub fn new(image: &str, name: Option<String>, command: Option<String>, ports: Option<HashMap<u16, u16>>, volumes: Option<HashMap<String, String>>, environment: Option<HashMap<String, String>>, stdin: Option<String>, arguments: Option<Vec<String>>) -> Self{
         Self { 
             image: image.to_string(), 
             name,
             command, 
             ports, 
             volumes, 
-            environment
+            environment,
+            stdin,
+            arguments,
         }
     }
 }
